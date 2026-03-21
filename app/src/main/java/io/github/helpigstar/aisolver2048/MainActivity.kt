@@ -4,18 +4,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.navigation.NavHost
+import androidx.navigation.compose.NavHost
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.helpigstar.aisolver2048.ui.platform.components.util.rememberAisolver2048NavController
 import io.github.helpigstar.aisolver2048.ui.platform.components.workspace.AisolverWorkspaceScreen
 import io.github.helpigstar.aisolver2048.ui.platform.feature.rootnav.RootNavigationRoute
+import io.github.helpigstar.aisolver2048.ui.platform.feature.rootnav.rootNavDestination
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
 
 @AndroidEntryPoint
@@ -31,8 +34,10 @@ class MainActivity : ComponentActivity() {
                 NavHost(
                     navController = navController,
                     startDestination = RootNavigationRoute,
+                    modifier = Modifier
+                        .background(color = Color.White)
                 ) {
-                    rootNav
+                    rootNavDestination { shouldShowSplashScreen = false }
                 }
             }
         }

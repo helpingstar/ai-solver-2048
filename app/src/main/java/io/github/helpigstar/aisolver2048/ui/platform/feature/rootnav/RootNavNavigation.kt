@@ -8,9 +8,9 @@ import kotlinx.serialization.Serializable
 data object RootNavigationRoute
 
 fun NavGraphBuilder.rootNavDestination(
-    onSplachScreenRemoved: () -> Unit,
+    onSplashScreenRemoved: () -> Unit,
 ) {
     composable<RootNavigationRoute> {
-        RootNavScreen
+        RootNavScreen(onSplashScreenRemoved = onSplashScreenRemoved)
     }
 }

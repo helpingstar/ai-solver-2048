@@ -1,9 +1,11 @@
-package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
+package io.github.helpigstar.aisolver2048.ui.onboarding.feature
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,9 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+
 @Composable
-fun WorkspaceScreen(
-    viewModel: WorkspaceViewModel = hiltViewModel(),
+fun WelcomeScreen(
+    viewModel: WelcomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
@@ -37,5 +40,16 @@ fun WorkspaceScreen(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 12.dp),
         )
+
+        Button(
+            onClick = {
+                viewModel.trySendAction(WelcomeAction.StartClick)
+            },
+            modifier = Modifier
+                .padding(top = 24.dp)
+                .fillMaxWidth(),
+        ) {
+            Text(text = state.buttonText)
+        }
     }
 }
