@@ -26,3 +26,5 @@ rootProject.name = "AiSolver2048"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":app")
 include(":ui")
+include(":data")
+include(":core")
