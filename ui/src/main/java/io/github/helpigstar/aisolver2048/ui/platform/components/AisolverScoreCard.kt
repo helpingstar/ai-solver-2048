@@ -2,7 +2,6 @@ package io.github.helpigstar.aisolver2048.ui.platform.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
@@ -12,19 +11,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverActionButtonDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 
 object AisolverScoreCardDefaults {
     val MinWidth = 206.dp
-    val MinHeight = 70.dp
-    val HorizontalPadding = 16.dp
-    val VerticalPadding = 10.dp
-    val ContentSpacing = 2.dp
+    val Height = AisolverActionButtonDefaults.Size
+    val StartPadding = 16.dp
+    val ContentSpacing = 8.dp
     val Shape = RoundedCornerShape(14.dp)
 
     val ContainerColor = defaultAisolverColorScheme.background.tertiary
@@ -38,19 +38,17 @@ fun AisolverScoreCard(
     modifier: Modifier = Modifier,
     label: String = "Score",
 ) {
-    Column(
+    Row(
         modifier = modifier
             .defaultMinSize(
                 minWidth = AisolverScoreCardDefaults.MinWidth,
-                minHeight = AisolverScoreCardDefaults.MinHeight,
+                minHeight = AisolverScoreCardDefaults.Height,
             )
             .clip(AisolverScoreCardDefaults.Shape)
             .background(AisolverScoreCardDefaults.ContainerColor)
-            .padding(
-                horizontal = AisolverScoreCardDefaults.HorizontalPadding,
-                vertical = AisolverScoreCardDefaults.VerticalPadding,
-            ),
-        verticalArrangement = Arrangement.spacedBy(AisolverScoreCardDefaults.ContentSpacing),
+            .padding(start = AisolverScoreCardDefaults.StartPadding),
+        horizontalArrangement = Arrangement.spacedBy(AisolverScoreCardDefaults.ContentSpacing),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
@@ -91,6 +89,7 @@ private fun AisolverScoreCardRowPreview() {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             AisolverScoreCard(
                 score = 1024,
