@@ -1,5 +1,8 @@
 package io.github.helpigstar.aisolver2048.ui.platform.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,8 +62,10 @@ object AisolverRecommendationItemDefaults {
     val HorizontalPadding = 16.dp
     val VerticalPadding = 8.dp
     val IconSpacing = 16.dp
+    val ItemHeight = IconChipSize + (VerticalPadding * 2)
     val DividerThickness = 1.dp
     val IconChipShape = RoundedCornerShape(14.dp)
+    const val ValueAnimationDurationMillis = 300
 
     val IconChipColor = defaultAisolverColorScheme.background.utility
     val LabelColor = defaultAisolverColorScheme.text.secondary
@@ -72,9 +78,19 @@ fun AisolverRecommendationItem(
     direction: AisolverRecommendationDirection,
     confidencePercent: Float,
     modifier: Modifier = Modifier,
+    animateValueChanges: Boolean = true,
     showDivider: Boolean = true,
 ) {
     val resolvedConfidencePercent = confidencePercent.coerceIn(minimumValue = 0f, maximumValue = 100f)
+    val animatedConfidencePercent = animateFloatAsState(
+        targetValue = resolvedConfidencePercent,
+        animationSpec = if (animateValueChanges) {
+            tween(durationMillis = AisolverRecommendationItemDefaults.ValueAnimationDurationMillis)
+        } else {
+            snap()
+        },
+        label = "recommendationConfidencePercent",
+    )
 
     Column(
         modifier = modifier,
@@ -82,6 +98,7 @@ fun AisolverRecommendationItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(AisolverRecommendationItemDefaults.ItemHeight)
                 .padding(
                     horizontal = AisolverRecommendationItemDefaults.HorizontalPadding,
                     vertical = AisolverRecommendationItemDefaults.VerticalPadding,
@@ -114,7 +131,7 @@ fun AisolverRecommendationItem(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = resolvedConfidencePercent.toDisplayPercent(),
+                text = animatedConfidencePercent.value.toDisplayPercent(),
                 color = AisolverRecommendationItemDefaults.ConfidenceColor,
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,

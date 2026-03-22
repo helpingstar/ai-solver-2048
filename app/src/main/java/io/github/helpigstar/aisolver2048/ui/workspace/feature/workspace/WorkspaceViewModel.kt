@@ -93,6 +93,7 @@ class WorkspaceViewModel @Inject constructor(
             updatedSnapshot.toState(
                 selectedCellIndex = selectedCellIndex,
                 canUndo = undoHistory.isNotEmpty(),
+                recommendations = state.recommendations.toPlaceholderRecommendations(),
             )
         }
     }
@@ -106,6 +107,7 @@ class WorkspaceViewModel @Inject constructor(
             restoredSnapshot.toState(
                 selectedCellIndex = null,
                 canUndo = undoHistory.isNotEmpty(),
+                recommendations = state.recommendations.toPlaceholderRecommendations(),
             )
         }
     }
@@ -120,6 +122,7 @@ class WorkspaceViewModel @Inject constructor(
             resetSnapshot.toState(
                 selectedCellIndex = null,
                 canUndo = undoHistory.isNotEmpty(),
+                recommendations = state.recommendations.toPlaceholderRecommendations(),
             )
         }
     }
@@ -134,7 +137,10 @@ class WorkspaceViewModel @Inject constructor(
             }
 
         mutableStateFlow.update { currentState ->
-            currentState.copy(recommendations = generatedRecommendations)
+            currentState.copy(
+                recommendations = generatedRecommendations,
+                animateRecommendationChanges = true,
+            )
         }
     }
 
@@ -156,6 +162,7 @@ data class WorkspaceState(
     val canUndo: Boolean,
     val canReset: Boolean,
     val canAnalyze: Boolean,
+    val animateRecommendationChanges: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
 ) : Parcelable
 
@@ -190,6 +197,7 @@ private fun WorkspaceState.toSnapshot(): WorkspaceSnapshot =
 private fun WorkspaceSnapshot.toState(
     selectedCellIndex: Int?,
     canUndo: Boolean,
+    recommendations: List<WorkspaceRecommendationUi> = defaultWorkspaceRecommendations(),
 ): WorkspaceState =
     WorkspaceState(
         boardValues = boardValues,
@@ -201,7 +209,8 @@ private fun WorkspaceSnapshot.toState(
             score = score,
         ),
         canAnalyze = canAnalyze(boardValues),
-        recommendations = defaultWorkspaceRecommendations(),
+        animateRecommendationChanges = false,
+        recommendations = recommendations,
     )
 
 private fun canReset(
@@ -232,6 +241,11 @@ private fun defaultWorkspaceRecommendations(): List<WorkspaceRecommendationUi> =
             confidencePercent = 0f,
         ),
     )
+
+private fun List<WorkspaceRecommendationUi>.toPlaceholderRecommendations(): List<WorkspaceRecommendationUi> =
+    map { recommendation ->
+        recommendation.copy(confidencePercent = 0f)
+    }
 
 private fun WorkspaceRecommendationProbability.toUiModel(): WorkspaceRecommendationUi =
     WorkspaceRecommendationUi(

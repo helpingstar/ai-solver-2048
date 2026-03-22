@@ -94,6 +94,7 @@ private fun WorkspaceScreen(
                 onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
                 modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
                 enabled = state.canAnalyze,
+                animateRecommendationChanges = state.animateRecommendationChanges,
             )
             if (state.selectedCellIndex != null) {
                 WorkspaceEditControls(
@@ -271,6 +272,7 @@ private fun WorkspaceScreenPreview() {
                 canUndo = true,
                 canReset = true,
                 canAnalyze = true,
+                animateRecommendationChanges = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(
                         direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Up,

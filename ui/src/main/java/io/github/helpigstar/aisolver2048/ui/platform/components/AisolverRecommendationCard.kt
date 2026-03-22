@@ -27,6 +27,7 @@ fun AisolverRecommendationCard(
     onAnalyzeClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    animateRecommendationChanges: Boolean = true,
     title: String = "AI Recommendation",
     analyzeButtonLabel: String = "Analyze",
     analyzeButtonContentDescription: String? = null,
@@ -52,7 +53,10 @@ fun AisolverRecommendationCard(
                 analyzeButtonLabel = analyzeButtonLabel,
                 analyzeButtonContentDescription = analyzeButtonContentDescription,
             )
-            AisolverRecommendationList(recommendations = recommendations)
+            AisolverRecommendationList(
+                recommendations = recommendations,
+                animateRecommendationChanges = animateRecommendationChanges,
+            )
         }
     }
 }

@@ -109,6 +109,9 @@ Phase 1 기준:
 •	Analyze 클릭 시 임시 난수 확률 4개를 생성해 합이 `100f`가 되게 정규화
 •	리스트는 raw 확률 기준 내림차순으로 정렬
 •	화면 표시는 소수 1자리까지 내림
+•	Analyze 결과로 순위가 바뀌면 각 row는 이전 위치에서 새 위치로 이동 애니메이션
+•	Analyze 결과의 percent 값도 부드럽게 변화
+•	edit / undo / reset으로 placeholder로 돌아갈 때는 즉시 반영
 •	이 임시 분석은 차후 on-device AI로 대체한다.
 
 5.4 Undo/Reset
@@ -168,6 +171,9 @@ Score 정책
 •	row tap 동작은 아직 구현하지 않는다.
 •	board에 값이 있으면 Analyze 버튼이 활성화된다.
 •	Analyze 클릭 시 임시 난수 분석 결과로 갱신한다.
+•	Analyze 결과로 순위 변경 시 row 이동 애니메이션을 적용한다.
+•	Analyze 결과의 percent 값은 부드럽게 변화한다.
+•	placeholder 복귀는 애니메이션 없이 즉시 반영한다.
 •	actual on-device AI 분석 및 best move 강조는 차기 단계에서 구현한다.
 
 6.4 하단 컨트롤 영역
@@ -453,6 +459,7 @@ Flow 4. 전체 초기화
 이 피쳐를 수정할 때의 기준
 •	카드 구조와 row UI는 공용 컴포넌트 원형을 유지한다.
 •	Phase 1에서는 `WorkspaceManager.kt`가 임시 난수 결과를 생성하고 `WorkspaceViewModel.kt`가 이를 상태에 반영한다.
+•	순위 이동 애니메이션과 값 변화 애니메이션은 `AisolverRecommendationList.kt`, `AisolverRecommendationItem.kt`에서 처리한다.
 •	카드의 활성/비활성 상태만 화면 조합 쪽에서 제어한다.
 
 6.4 하단 컨트롤 영역 대응 UI
