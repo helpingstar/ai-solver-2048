@@ -41,7 +41,8 @@ class WorkspaceViewModel @Inject constructor(
         ?: workspaceManager
             .createInitialSnapshot()
             .toState(
-                selectedCellIndex = null,
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
                 canUndo = false,
             ),
 ) {
@@ -61,47 +62,56 @@ class WorkspaceViewModel @Inject constructor(
     override fun handleAction(action: WorkspaceAction) {
         when (action) {
             is WorkspaceAction.CellClick -> handleCellClick(action.cellIndex)
+            WorkspaceAction.EditBottomSheetDismiss -> dismissEditBottomSheet()
+            is WorkspaceAction.EditBottomSheetValueClick -> updateEditingCellValue(action.value)
             is WorkspaceAction.Move -> handleMove(direction = action.direction)
-            WorkspaceAction.ClearSelectedCellClick -> updateSelectedCellValue(EMPTY_CELL_VALUE)
             WorkspaceAction.ResetClick -> handleResetClick()
             WorkspaceAction.AnalyzeClick -> handleAnalyzeClick()
-            WorkspaceAction.SetSelectedCellValueToFourClick -> updateSelectedCellValue(4)
-            WorkspaceAction.SetSelectedCellValueToTwoClick -> updateSelectedCellValue(2)
             WorkspaceAction.UndoClick -> handleUndoClick()
         }
     }
 
     private fun handleCellClick(cellIndex: Int) {
-        if (state.isInteractionLocked) return
+        if (state.isInteractionLocked || state.isEditBottomSheetVisible) return
 
         mutableStateFlow.update { currentState ->
             currentState.copy(
-                selectedCellIndex = if (currentState.selectedCellIndex == cellIndex) {
-                    null
-                } else {
-                    cellIndex
-                },
+                editingCellIndex = cellIndex,
+                isEditBottomSheetVisible = true,
             )
         }
     }
 
-    private fun updateSelectedCellValue(value: Int) {
+    private fun dismissEditBottomSheet() {
+        mutableStateFlow.update { currentState ->
+            currentState.copy(
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
+            )
+        }
+    }
+
+    private fun updateEditingCellValue(value: Int) {
         if (state.isInteractionLocked) return
 
-        val selectedCellIndex = state.selectedCellIndex ?: return
+        val editingCellIndex = state.editingCellIndex ?: return
         val currentSnapshot = state.toSnapshot()
         val updatedSnapshot = workspaceManager.updateCell(
             snapshot = currentSnapshot,
-            cellIndex = selectedCellIndex,
+            cellIndex = editingCellIndex,
             value = value,
         )
 
-        if (updatedSnapshot == currentSnapshot) return
+        if (updatedSnapshot == currentSnapshot) {
+            dismissEditBottomSheet()
+            return
+        }
 
         pushUndoSnapshot(currentSnapshot)
         mutableStateFlow.update {
             updatedSnapshot.toState(
-                selectedCellIndex = selectedCellIndex,
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
             )
@@ -109,13 +119,14 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun handleUndoClick() {
-        if (state.isInteractionLocked || undoHistory.isEmpty()) return
+        if (state.isInteractionLocked || state.isEditBottomSheetVisible || undoHistory.isEmpty()) return
 
         val restoredSnapshot = undoHistory.removeAt(undoHistory.lastIndex)
         persistUndoHistory()
         mutableStateFlow.update {
             restoredSnapshot.toState(
-                selectedCellIndex = null,
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
             )
@@ -123,7 +134,7 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun handleResetClick() {
-        if (state.isInteractionLocked) return
+        if (state.isInteractionLocked || state.isEditBottomSheetVisible) return
 
         val resetSnapshot = workspaceManager.reset()
         val currentSnapshot = state.toSnapshot()
@@ -132,7 +143,8 @@ class WorkspaceViewModel @Inject constructor(
         pushUndoSnapshot(currentSnapshot)
         mutableStateFlow.update {
             resetSnapshot.toState(
-                selectedCellIndex = null,
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
             )
@@ -140,7 +152,7 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun handleAnalyzeClick() {
-        if (state.isInteractionLocked || !state.canAnalyze) return
+        if (state.isInteractionLocked || state.isEditBottomSheetVisible || !state.canAnalyze) return
 
         val generatedRecommendations = workspaceManager
             .generateRecommendations(snapshot = state.toSnapshot())
@@ -161,7 +173,7 @@ class WorkspaceViewModel @Inject constructor(
     ) {
         if (
             state.isInteractionLocked ||
-            state.selectedCellIndex != null ||
+            state.isEditBottomSheetVisible ||
             !canMove(boardValues = state.boardValues)
         ) {
             return
@@ -184,7 +196,8 @@ class WorkspaceViewModel @Inject constructor(
 
         mutableStateFlow.update {
             moveResult.snapshot.toState(
-                selectedCellIndex = null,
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = placeholderRecommendations,
                 boardTiles = stageOneBoardTiles,
@@ -226,7 +239,8 @@ data class WorkspaceState(
     val boardValues: List<Int>,
     val boardTiles: List<WorkspaceBoardTileUi>,
     val score: Int,
-    val selectedCellIndex: Int?,
+    val editingCellIndex: Int?,
+    val isEditBottomSheetVisible: Boolean,
     val canUndo: Boolean,
     val canReset: Boolean,
     val canAnalyze: Boolean,
@@ -253,6 +267,10 @@ data class WorkspaceRecommendationUi(
 sealed class WorkspaceAction {
     data class CellClick(val cellIndex: Int) : WorkspaceAction()
 
+    data object EditBottomSheetDismiss : WorkspaceAction()
+
+    data class EditBottomSheetValueClick(val value: Int) : WorkspaceAction()
+
     data class Move(val direction: WorkspaceRecommendationDirection) : WorkspaceAction()
 
     data object UndoClick : WorkspaceAction()
@@ -260,12 +278,6 @@ sealed class WorkspaceAction {
     data object ResetClick : WorkspaceAction()
 
     data object AnalyzeClick : WorkspaceAction()
-
-    data object ClearSelectedCellClick : WorkspaceAction()
-
-    data object SetSelectedCellValueToTwoClick : WorkspaceAction()
-
-    data object SetSelectedCellValueToFourClick : WorkspaceAction()
 }
 
 private fun WorkspaceState.toSnapshot(): WorkspaceSnapshot =
@@ -275,7 +287,8 @@ private fun WorkspaceState.toSnapshot(): WorkspaceSnapshot =
     )
 
 private fun WorkspaceSnapshot.toState(
-    selectedCellIndex: Int?,
+    editingCellIndex: Int?,
+    isEditBottomSheetVisible: Boolean,
     canUndo: Boolean,
     recommendations: List<WorkspaceRecommendationUi> = defaultWorkspaceRecommendations(),
     boardTiles: List<WorkspaceBoardTileUi> = boardValues.toStaticBoardTiles(),
@@ -285,7 +298,8 @@ private fun WorkspaceSnapshot.toState(
         boardValues = boardValues,
         boardTiles = boardTiles,
         score = score,
-        selectedCellIndex = selectedCellIndex,
+        editingCellIndex = editingCellIndex,
+        isEditBottomSheetVisible = isEditBottomSheetVisible,
         canUndo = canUndo,
         canReset = canReset(
             boardValues = boardValues,
@@ -301,7 +315,8 @@ private fun WorkspaceState.restoreAfterProcessDeath(): WorkspaceState =
     if (isInteractionLocked) {
         copy(
             boardTiles = boardValues.toStaticBoardTiles(),
-            selectedCellIndex = null,
+            editingCellIndex = null,
+            isEditBottomSheetVisible = false,
             isInteractionLocked = false,
             animateRecommendationChanges = false,
             canReset = canReset(

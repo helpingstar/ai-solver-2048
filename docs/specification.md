@@ -79,7 +79,7 @@ AI는 흐름 강제자가 아니다. 사용자는 항상 분석 결과를 따를
 
 4.2 주요 사용 시나리오
 •	현재 보드를 빠르게 입력
-•	선택 셀을 수정하고 다른 셀로 곧바로 이동
+•	셀을 탭해 bottom sheet를 열고 값을 수정한 뒤 다른 셀로 곧바로 이동
 •	잘못 입력한 값을 Undo로 복구
 •	작업 중인 보드를 Reset 후 다시 시작
 
@@ -89,9 +89,9 @@ AI는 흐름 강제자가 아니다. 사용자는 항상 분석 결과를 따를
 
 5.1 보드 편집
 •	빈 4x4 board에서 시작
-•	셀 탭으로 선택
-•	하단 툴바에서 값 수정
-•	Phase 1에서는 Clear / 2 / 4 중심의 빠른 수정을 지원
+•	셀 탭으로 bottom sheet 열기
+•	bottom sheet에서 값 선택 후 즉시 반영
+•	Phase 1에서는 Clear와 power-of-two 값 선택을 지원
 
 5.2 방향 적용
 Phase 1 확장 기준:
@@ -146,20 +146,14 @@ Score 정책
 6.2 중앙 Board 영역
 •	4x4 board를 화면 중심에 크게 배치
 •	첫 진입 시 완전히 빈 board 표시
-•	셀 single tap으로 선택
-•	선택된 셀은 시각적으로 강조
+•	셀 single tap으로 편집용 bottom sheet 열기
+•	선택 강조 overlay는 사용하지 않음
 
-셀 선택 상태 규칙
-셀 선택 상태에서는 아래 입력이 모두 잠긴다.
-•	swipe
-•	방향 버튼
-•	추천 row tap
-•	move 애니메이션 진행 중에도 동일 입력을 모두 잠근다.
-
-선택 규칙:
-•	셀 탭 시 해당 셀 선택
-•	다른 셀 탭 시 선택 이동
-•	같은 셀 재탭 시 선택 해제
+보드 편집 규칙
+•	아무 셀이나 탭하면 편집용 bottom sheet가 열린다.
+•	bottom sheet에서 `Clear` 또는 값을 선택하면 해당 셀에 즉시 반영되고 sheet는 닫힌다.
+•	sheet를 dismiss하면 보드 값은 유지되고 편집 상태만 종료된다.
+•	move 애니메이션 진행 중에는 셀 탭과 bottom sheet 진입을 잠근다.
 
 6.3 하단 AI 결과 카드
 
@@ -172,7 +166,7 @@ Score 정책
 
 동작 규칙:
 •	카드는 비어 있지 않고 항상 현재 UI 구조를 유지한다.
-•	row tap은 board에 값이 있고 셀 선택 상태가 아닐 때 방향 입력으로 동작한다.
+•	row tap은 board에 값이 있고 bottom sheet가 열려 있지 않을 때 방향 입력으로 동작한다.
 •	board에 값이 있으면 Analyze 버튼이 활성화된다.
 •	Analyze 클릭 시 임시 난수 분석 결과로 갱신한다.
 •	Analyze 결과로 순위 변경 시 row 이동 애니메이션을 적용한다.
@@ -182,46 +176,56 @@ Score 정책
 
 6.4 하단 컨트롤 영역
 
-Phase 1에서는 별도의 move controls row를 추가하지 않는다.
+Phase 1에서는 별도의 edit row나 move controls row를 추가하지 않는다.
 
-셀 선택 상태
+편집용 bottom sheet
 노출 요소:
 •	Clear
-•	2
-•	4
-•	x2
-•	÷2
-•	More
+•	2, 4, 8, 16, 32, 64
+•	128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768
 
 허용 동작:
-•	셀 편집만 가능
-•	move 관련 조작은 전부 비활성화
-•	x2 / ÷2 / More는 비활성 placeholder로만 노출한다.
+•	셀 편집은 `AisolverBottomSheet`에서만 수행한다.
+•	값 선택 시 즉시 반영 후 sheet를 닫는다.
+•	별도의 x2 / ÷2 / More placeholder는 노출하지 않는다.
 
 ⸻
 
 7. 셀 편집 상세 설계
 
-7.1 quick action
+7.1 value picker bottom sheet
 
-선택된 셀에 대해 아래 quick action 제공:
+탭한 셀에 대해 아래 bottom sheet 항목 제공:
 •	Clear
 •	2
 •	4
-•	x2
-•	÷2
-•	More
+•	8
+•	16
+•	32
+•	64
+•	128
+•	256
+•	512
+•	1024
+•	2048
+•	4096
+•	8192
+•	16384
+•	32768
 
 의도
-•	Phase 1에서 실제 동작은 Clear / 2 / 4까지만 제공
-•	x2 / ÷2 / More는 다음 단계 기능을 위한 placeholder로 유지
-•	모든 버튼은 한 줄 수평 row로 배치
+•	Phase 1에서는 `AisolverBottomSheet` 하나로 모든 수동 편집 경로를 통일한다.
+•	입력 가능한 값은 Empty 또는 2의 거듭제곱만 제공한다.
+•	항목은 4x4 grid로 가운데 정렬해 노출한다.
 
-7.2 More bottom sheet
+7.2 bottom sheet 동작
 
-Phase 1에서는 More bottom sheet를 구현하지 않는다.
-•	More 버튼은 비활성 상태로만 노출한다.
-•	power-of-two picker와 확장 grid는 차기 단계에서 정의한다.
+Phase 1 기준:
+•	Material3 `ModalBottomSheet`를 사용한다.
+•	drag handle은 Material3 기본 요소를 그대로 사용한다.
+•	셀 탭 시 즉시 sheet를 연다.
+•	항목 탭 시 해당 셀 값을 반영하고 sheet를 닫는다.
+•	scrim 또는 dismiss gesture로 닫으면 값은 변경하지 않는다.
 
 7.3 invalid value 정책
 •	3과 같은 값은 아예 입력 불가
@@ -263,7 +267,7 @@ Phase 1 확장 기준:
 9.2 방향 적용 직후 처리
 •	move가 성공하면 board와 score를 즉시 최종값으로 갱신한다.
 •	recommendation은 현재 순서를 유지한 채 `0.0%` placeholder로 즉시 초기화한다.
-•	move 애니메이션 중에는 board tap/swipe, recommendation row tap, Analyze, Undo, Reset, edit controls를 모두 잠근다.
+•	move 애니메이션 중에는 board tap/swipe, recommendation row tap, Analyze, Undo, Reset, bottom sheet 진입을 모두 잠근다.
 •	move가 실제로 일어나지 않으면 board, score, recommendation, undo history를 변경하지 않는다.
 
 9.3 random spawn 정책
@@ -297,7 +301,7 @@ Undo는 transaction 단위로 동작한다.
 
 추가 규칙:
 •	Undo는 board와 score 같은 domain 상태를 복구한다.
-•	Undo 후 셀 선택 상태는 복구하지 않고 해제한다.
+•	Undo 후 편집용 bottom sheet는 닫힌 상태를 유지한다.
 
 10.2 Reset
 
@@ -308,7 +312,7 @@ Reset 후 상태:
 •	score = 0
 •	결과 카드는 `0.0%` placeholder 상태 유지
 •	새 작업 시작 상태
-•	셀 선택 해제
+•	편집용 bottom sheet 닫힘
 
 Reset 자체도 Undo 가능한 transaction으로 취급한다.
 
@@ -320,29 +324,28 @@ Flow 1. 빈 board에서 특정 상태를 수동으로 만드는 흐름
 1.	앱 진입
 2.	빈 4x4 board 확인
 3.	셀 탭
-4.	하단 edit row 표시
-5.	Clear, 2, 4 중 하나로 값 설정
+4.	bottom sheet 표시
+5.	Clear 또는 원하는 값 선택
 6.	필요한 셀 반복 수정
 7.	추천 카드는 placeholder 상태 유지
 
-Flow 2. 선택 이동 및 해제
-1.	한 셀 선택
-2.	다른 셀 탭
-3.	선택이 새 셀로 이동
-4.	같은 셀을 다시 탭
-5.	선택 해제
+Flow 2. 다른 셀로 편집 대상 전환
+1.	한 셀 탭
+2.	bottom sheet에서 값 설정
+3.	다른 셀 탭
+4.	새 bottom sheet가 열림
+5.	새 값 설정
 
 Flow 3. 실수 복구
 1.	잘못된 셀 수정 발생
 2.	Undo 탭
 3.	직전 transaction 복구
-4.	선택 상태는 해제된 채 유지
+4.	편집용 bottom sheet는 닫힌 상태 유지
 
 Flow 4. 전체 초기화
-1.	셀 선택
-2.	또는 아무 셀도 선택하지 않은 상태에서 Reset 탭
-3.	board와 score가 초기화됨
-4.	필요 시 Undo로 reset 이전 상태 복구
+1.	보드 편집 후 Reset 탭
+2.	board와 score가 초기화됨
+3.	필요 시 Undo로 reset 이전 상태 복구
 
 ⸻
 
@@ -350,7 +353,7 @@ Flow 4. 전체 초기화
 
 이 앱의 UX는 다음 문장으로 요약된다.
 
-빈 4x4 board에서 시작하는 단일 workspace 화면에서, 사용자는 셀을 선택해 Clear / 2 / 4로 상태를 빠르게 수정하고, Undo / Reset으로 작업을 복구하거나 초기화한다. 또한 비선택 상태에서는 board swipe 또는 recommendation row tap으로 `slide + merge` move를 적용하고, 필요할 때 Analyze로 임시 AI 확률을 다시 계산한다. More sheet와 실제 on-device AI는 다음 단계로 분리한다.
+빈 4x4 board에서 시작하는 단일 workspace 화면에서, 사용자는 셀을 탭해 bottom sheet에서 원하는 값을 바로 넣고, Undo / Reset으로 작업을 복구하거나 초기화한다. 또한 board swipe 또는 recommendation row tap으로 `slide + merge` move를 적용하고, 필요할 때 Analyze로 임시 AI 확률을 다시 계산한다. 실제 on-device AI는 다음 단계로 분리한다.
 
 ⸻
 
@@ -374,11 +377,11 @@ Flow 4. 전체 초기화
 •	셀 수정 속도
 •	accidental move 방지
 •	결과 카드의 가독성
-•	선택 상태와 비선택 상태의 전환 명확성
+•	bottom sheet 편집 흐름의 명확성
 
 14.2 Compose 관점의 주의점
-•	board 상태, 선택 상태, 결과 카드 상태는 단일 source of truth에서 관리한다.
-•	셀 선택/해제와 하단 toolbar 전환은 recomposition 비용이 낮게 유지되도록 구조화한다.
+•	board 상태, bottom sheet 편집 상태, 결과 카드 상태는 단일 source of truth에서 관리한다.
+•	셀 탭과 bottom sheet 열림/닫힘은 recomposition 비용이 낮게 유지되도록 구조화한다.
 •	swipe와 row tap은 동일한 move action으로 수렴시킨다.
 •	Undo는 transaction 단위 상태 스냅샷 또는 action log 기반으로 일관되게 처리한다.
 
@@ -394,7 +397,7 @@ Flow 4. 전체 초기화
 •	swipe / recommendation row tap 기반 방향 적용
 •	slide + merge
 •	Undo / Reset
-•	선택 셀 강조 및 선택 해제
+•	Material3 bottom sheet 기반 셀 편집
 •	수동 Analyze 버튼
 •	임시 난수 recommendation 결과
 •	4방향 row 유지
@@ -440,7 +443,7 @@ Flow 4. 전체 초기화
 1.	`WorkspaceStatusSection`
 2.	`AisolverBoard`
 3.	`AisolverRecommendationCard`
-4.	셀 선택 상태일 때 `WorkspaceEditControls`
+4.	필요 시 `AisolverBottomSheet` host
 
 즉, 이후 어떤 피쳐를 붙일 때도 우선 위 조합 구조를 기준으로 어디에 삽입할지 판단한다.
 
@@ -459,10 +462,10 @@ Flow 4. 전체 초기화
 6.2 중앙 Board 영역 대응 UI
 •	Board 전체 조합: `AisolverBoard.kt`
 •	숫자 타일: `AisolverTile.kt`
-•	셀 선택 overlay, tap 처리, swipe 처리: `AisolverBoard.kt`
+•	셀 tap 처리, swipe 처리: `AisolverBoard.kt`
 
 이 피쳐를 수정할 때의 기준
-•	보드 전체 배치, 타일 위치, 선택 셀 강조는 `AisolverBoard.kt`에서 조정한다.
+•	보드 전체 배치와 타일 위치는 `AisolverBoard.kt`에서 조정한다.
 •	타일 값별 색상과 글자 크기는 `AisolverTile.kt`를 사용한다.
 •	slide / merge motion과 swipe gesture는 `AisolverBoard.kt`, `WorkspaceViewModel.kt`, `WorkspaceManager.kt`를 함께 본다.
 
@@ -480,20 +483,19 @@ Flow 4. 전체 초기화
 •	카드의 활성/비활성 상태만 화면 조합 쪽에서 제어한다.
 
 6.4 하단 컨트롤 영역 대응 UI
-•	Edit 상태 컨트롤: `WorkspaceScreen.kt` 내부 `WorkspaceEditControls`
-•	개별 편집 버튼: `WorkspaceScreen.kt` 내부 `WorkspaceEditButton`
+•	편집용 bottom sheet: `AisolverBottomSheet.kt`
 
 이 피쳐를 수정할 때의 기준
-•	Phase 1에서는 별도 move controls row가 없다.
-•	셀 선택 상태의 Clear / 2 / 4 / x2 / ÷2 / More는 `WorkspaceEditControls`에서 관리한다.
-•	x2 / ÷2 / More의 활성화는 차기 단계에서 확장한다.
+•	Phase 1에서는 별도 move controls row와 edit row가 없다.
+•	수동 보드 편집은 `AisolverBottomSheet.kt` 하나로만 수행한다.
+•	sheet 열림/닫힘 상태와 반영 동작은 `WorkspaceScreen.kt`, `WorkspaceViewModel.kt`를 함께 본다.
 
-7.2 More bottom sheet 대응 UI
-•	Phase 1 미구현
+7.2 bottom sheet 대응 UI
+•	편집용 grid sheet: `AisolverBottomSheet.kt`
 
 이 피쳐를 수정할 때의 기준
-•	More sheet를 추가할 때는 먼저 `WorkspaceState`와 `WorkspaceAction`에 sheet 상태가 필요한지 확인한다.
-•	그 다음 `WorkspaceScreen.kt`에 bottom sheet host를 추가한다.
+•	편집 흐름을 바꿀 때는 먼저 `WorkspaceState`와 `WorkspaceAction`의 sheet 상태를 확인한다.
+•	그 다음 `WorkspaceScreen.kt`의 bottom sheet host와 `AisolverBottomSheet.kt`를 함께 수정한다.
 
 8.3 결과 표현 방식 대응 UI
 •	정량 정보 카드: `AisolverRecommendationCard.kt`

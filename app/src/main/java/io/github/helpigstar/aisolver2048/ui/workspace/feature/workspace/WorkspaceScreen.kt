@@ -3,28 +3,21 @@ package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -35,12 +28,14 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDef
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardPosition
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardSwipeDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardTile
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBottomSheet
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBottomSheetItem
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverGameActions
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendation
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCardDefaults
-import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverGameActions
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
 
@@ -58,12 +53,13 @@ fun WorkspaceScreen(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun WorkspaceScreen(
     state: WorkspaceState,
     onAction: (WorkspaceAction) -> Unit,
 ) {
-    val canSelectCells = !state.isInteractionLocked
-    val canTriggerMove = !state.isInteractionLocked && state.selectedCellIndex == null && state.canAnalyze
+    val canEditBoardCells = !state.isInteractionLocked && !state.isEditBottomSheetVisible
+    val canTriggerMove = !state.isInteractionLocked && !state.isEditBottomSheetVisible && state.canAnalyze
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -82,15 +78,14 @@ private fun WorkspaceScreen(
         ) {
             WorkspaceStatusSection(
                 score = state.score,
-                canUndo = state.canUndo && !state.isInteractionLocked,
-                canReset = state.canReset && !state.isInteractionLocked,
+                canUndo = state.canUndo && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
+                canReset = state.canReset && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
                 onUndoClick = { onAction(WorkspaceAction.UndoClick) },
                 onResetClick = { onAction(WorkspaceAction.ResetClick) },
             )
             AisolverBoard(
                 tiles = state.boardTiles.toBoardTiles(),
-                selectedPosition = state.selectedCellIndex?.toBoardPosition(),
-                onCellClick = if (canSelectCells) { position ->
+                onCellClick = if (canEditBoardCells) { position ->
                     onAction(WorkspaceAction.CellClick(position.toCellIndex()))
                 } else {
                     null
@@ -110,17 +105,22 @@ private fun WorkspaceScreen(
                     null
                 },
                 modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                enabled = state.canAnalyze && !state.isInteractionLocked,
+                enabled = state.canAnalyze && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
                 animateRecommendationChanges = state.animateRecommendationChanges,
             )
-            if (state.selectedCellIndex != null) {
-                WorkspaceEditControls(
-                    onClearClick = { onAction(WorkspaceAction.ClearSelectedCellClick) },
-                    onSetTwoClick = { onAction(WorkspaceAction.SetSelectedCellValueToTwoClick) },
-                    onSetFourClick = { onAction(WorkspaceAction.SetSelectedCellValueToFourClick) },
-                    modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                )
-            }
+        }
+
+        if (state.isEditBottomSheetVisible) {
+            AisolverBottomSheet(
+                onDismissRequest = { onAction(WorkspaceAction.EditBottomSheetDismiss) },
+                onItemClick = { item ->
+                    onAction(
+                        WorkspaceAction.EditBottomSheetValueClick(
+                            value = item.toCellValue(),
+                        ),
+                    )
+                },
+            )
         }
     }
 }
@@ -156,90 +156,6 @@ private fun WorkspaceStatusSection(
                 resetEnabled = canReset,
             )
         }
-    }
-}
-
-@Composable
-private fun WorkspaceEditControls(
-    onClearClick: () -> Unit,
-    onSetTwoClick: () -> Unit,
-    onSetFourClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        WorkspaceEditButton(
-            label = "Clear",
-            onClick = onClearClick,
-            modifier = Modifier.weight(1f),
-        )
-        WorkspaceEditButton(
-            label = "2",
-            onClick = onSetTwoClick,
-            modifier = Modifier.weight(1f),
-        )
-        WorkspaceEditButton(
-            label = "4",
-            onClick = onSetFourClick,
-            modifier = Modifier.weight(1f),
-        )
-        WorkspaceEditButton(
-            label = "x2",
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.weight(1f),
-        )
-        WorkspaceEditButton(
-            label = "÷2",
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.weight(1f),
-        )
-        WorkspaceEditButton(
-            label = "More",
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun WorkspaceEditButton(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(40.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = defaultAisolverColorScheme.button.utilityBackground,
-            contentColor = defaultAisolverColorScheme.button.utilityForeground,
-            disabledContainerColor = defaultAisolverColorScheme.button.utilityBackgroundDisabled,
-            disabledContentColor = defaultAisolverColorScheme.button.utilityForegroundDisabled,
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            focusedElevation = 0.dp,
-            hoveredElevation = 0.dp,
-            disabledElevation = 0.dp,
-        ),
-        contentPadding = PaddingValues(horizontal = 0.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-            maxLines = 1,
-        )
     }
 }
 
@@ -286,6 +202,12 @@ private fun AisolverRecommendationDirection.toWorkspaceDirection(): WorkspaceRec
         AisolverRecommendationDirection.Down -> WorkspaceRecommendationDirection.Down
     }
 
+private fun AisolverBottomSheetItem.toCellValue(): Int =
+    when (this) {
+        AisolverBottomSheetItem.Clear -> 0
+        is AisolverBottomSheetItem.Value -> value
+    }
+
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
 private fun WorkspaceScreenPreview() {
@@ -302,7 +224,8 @@ private fun WorkspaceScreenPreview() {
                 boardValues = previewBoardValues,
                 boardTiles = previewBoardValues.toPreviewBoardTiles(),
                 score = 8,
-                selectedCellIndex = null,
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
                 canUndo = true,
                 canReset = true,
                 canAnalyze = true,
