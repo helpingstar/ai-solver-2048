@@ -48,12 +48,6 @@ fun AisolverHeader(
             scrolledContainerColor = AisolverHeaderDefaults.ContainerColor,
             titleContentColor = AisolverHeaderDefaults.TitleColor,
         ),
-        windowInsets = WindowInsets(
-            left = 0,
-            top = 0,
-            right = 0,
-            bottom = 0,
-        ),
     )
 }
 
