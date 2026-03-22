@@ -14,6 +14,11 @@ interface WorkspaceManager {
 
     fun reset(): WorkspaceSnapshot
 
+    fun applyMove(
+        snapshot: WorkspaceSnapshot,
+        direction: WorkspaceRecommendationDirection,
+    ): WorkspaceMoveResult
+
     fun generateRecommendations(
         snapshot: WorkspaceSnapshot,
     ): List<WorkspaceRecommendationProbability>
@@ -29,6 +34,26 @@ data class WorkspaceRecommendationProbability(
     val direction: WorkspaceRecommendationDirection,
     val confidencePercent: Float,
 )
+
+data class WorkspaceMoveResult(
+    val snapshot: WorkspaceSnapshot,
+    val stageOneTiles: List<WorkspaceMoveTile>,
+    val finalTiles: List<WorkspaceMoveTile>,
+    val hasChanged: Boolean,
+)
+
+data class WorkspaceMoveTile(
+    val id: String,
+    val value: Int,
+    val cellIndex: Int,
+    val previousCellIndex: Int? = null,
+    val motionState: WorkspaceMoveTileMotionState = WorkspaceMoveTileMotionState.Static,
+)
+
+enum class WorkspaceMoveTileMotionState {
+    Static,
+    Merged,
+}
 
 enum class WorkspaceRecommendationDirection {
     Up,

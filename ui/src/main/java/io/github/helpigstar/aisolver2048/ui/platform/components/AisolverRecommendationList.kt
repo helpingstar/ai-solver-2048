@@ -30,6 +30,7 @@ fun AisolverRecommendationList(
     recommendations: List<AisolverRecommendation>,
     modifier: Modifier = Modifier,
     animateRecommendationChanges: Boolean = true,
+    onRecommendationClick: ((AisolverRecommendationDirection) -> Unit)? = null,
 ) {
     LazyColumn(
         modifier = modifier
@@ -46,6 +47,9 @@ fun AisolverRecommendationList(
                 direction = recommendation.direction,
                 confidencePercent = recommendation.confidencePercent,
                 animateValueChanges = animateRecommendationChanges,
+                onClick = onRecommendationClick?.let { onClick ->
+                    { onClick(recommendation.direction) }
+                },
                 modifier = Modifier.animateItem(
                     fadeInSpec = null,
                     placementSpec = tween(

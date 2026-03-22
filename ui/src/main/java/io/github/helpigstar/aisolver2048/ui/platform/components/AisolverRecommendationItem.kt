@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,6 +80,7 @@ fun AisolverRecommendationItem(
     confidencePercent: Float,
     modifier: Modifier = Modifier,
     animateValueChanges: Boolean = true,
+    onClick: (() -> Unit)? = null,
     showDivider: Boolean = true,
 ) {
     val resolvedConfidencePercent = confidencePercent.coerceIn(minimumValue = 0f, maximumValue = 100f)
@@ -99,6 +101,13 @@ fun AisolverRecommendationItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AisolverRecommendationItemDefaults.ItemHeight)
+                .then(
+                    if (onClick == null) {
+                        Modifier
+                    } else {
+                        Modifier.clickable(onClick = onClick)
+                    }
+                )
                 .padding(
                     horizontal = AisolverRecommendationItemDefaults.HorizontalPadding,
                     vertical = AisolverRecommendationItemDefaults.VerticalPadding,

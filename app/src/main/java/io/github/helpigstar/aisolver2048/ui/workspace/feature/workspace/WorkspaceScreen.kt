@@ -2,9 +2,9 @@ package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,20 +29,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardPosition
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardSwipeDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardTile
-import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverGameActions
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendation
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationCard
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCardDefaults
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverGameActions
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
 
 private const val BOARD_COLUMN_COUNT: Int = 4
-private const val EMPTY_CELL_VALUE: Int = 0
 
 @Composable
 fun WorkspaceScreen(
@@ -60,6 +62,9 @@ private fun WorkspaceScreen(
     state: WorkspaceState,
     onAction: (WorkspaceAction) -> Unit,
 ) {
+    val canSelectCells = !state.isInteractionLocked
+    val canTriggerMove = !state.isInteractionLocked && state.selectedCellIndex == null && state.canAnalyze
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = defaultAisolverColorScheme.background.primary,
@@ -77,23 +82,35 @@ private fun WorkspaceScreen(
         ) {
             WorkspaceStatusSection(
                 score = state.score,
-                canUndo = state.canUndo,
-                canReset = state.canReset,
+                canUndo = state.canUndo && !state.isInteractionLocked,
+                canReset = state.canReset && !state.isInteractionLocked,
                 onUndoClick = { onAction(WorkspaceAction.UndoClick) },
                 onResetClick = { onAction(WorkspaceAction.ResetClick) },
             )
             AisolverBoard(
-                tiles = state.boardValues.toBoardTiles(),
+                tiles = state.boardTiles.toBoardTiles(),
                 selectedPosition = state.selectedCellIndex?.toBoardPosition(),
-                onCellClick = { position ->
+                onCellClick = if (canSelectCells) { position ->
                     onAction(WorkspaceAction.CellClick(position.toCellIndex()))
+                } else {
+                    null
+                },
+                onSwipe = if (canTriggerMove) { direction ->
+                    onAction(WorkspaceAction.Move(direction.toWorkspaceDirection()))
+                } else {
+                    null
                 },
             )
             AisolverRecommendationCard(
                 recommendations = state.recommendations.toRecommendationModels(),
                 onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
+                onRecommendationClick = if (canTriggerMove) { direction ->
+                    onAction(WorkspaceAction.Move(direction.toWorkspaceDirection()))
+                } else {
+                    null
+                },
                 modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                enabled = state.canAnalyze,
+                enabled = state.canAnalyze && !state.isInteractionLocked,
                 animateRecommendationChanges = state.animateRecommendationChanges,
             )
             if (state.selectedCellIndex != null) {
@@ -226,17 +243,15 @@ private fun WorkspaceEditButton(
     }
 }
 
-private fun List<Int>.toBoardTiles(): List<AisolverBoardTile> =
-    mapIndexedNotNull { index, value ->
-        if (value == EMPTY_CELL_VALUE) {
-            null
-        } else {
-            AisolverBoardTile(
-                id = "tile-$index",
-                value = value,
-                position = index.toBoardPosition(),
-            )
-        }
+private fun List<WorkspaceBoardTileUi>.toBoardTiles(): List<AisolverBoardTile> =
+    map { tile ->
+        AisolverBoardTile(
+            id = tile.id,
+            value = tile.value,
+            position = tile.cellIndex.toBoardPosition(),
+            previousPosition = tile.previousCellIndex?.toBoardPosition(),
+            motionState = tile.motionState,
+        )
     }
 
 private fun Int.toBoardPosition(): AisolverBoardPosition =
@@ -255,40 +270,60 @@ private fun List<WorkspaceRecommendationUi>.toRecommendationModels(): List<Aisol
         )
     }
 
+private fun AisolverBoardSwipeDirection.toWorkspaceDirection(): WorkspaceRecommendationDirection =
+    when (this) {
+        AisolverBoardSwipeDirection.Up -> WorkspaceRecommendationDirection.Up
+        AisolverBoardSwipeDirection.Right -> WorkspaceRecommendationDirection.Right
+        AisolverBoardSwipeDirection.Left -> WorkspaceRecommendationDirection.Left
+        AisolverBoardSwipeDirection.Down -> WorkspaceRecommendationDirection.Down
+    }
+
+private fun AisolverRecommendationDirection.toWorkspaceDirection(): WorkspaceRecommendationDirection =
+    when (this) {
+        AisolverRecommendationDirection.Up -> WorkspaceRecommendationDirection.Up
+        AisolverRecommendationDirection.Right -> WorkspaceRecommendationDirection.Right
+        AisolverRecommendationDirection.Left -> WorkspaceRecommendationDirection.Left
+        AisolverRecommendationDirection.Down -> WorkspaceRecommendationDirection.Down
+    }
+
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
 private fun WorkspaceScreenPreview() {
+    val previewBoardValues = listOf(
+        2, 0, 4, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+    )
+
     AiSolver2048Theme {
         WorkspaceScreen(
             state = WorkspaceState(
-                boardValues = listOf(
-                    2, 0, 4, 0,
-                    0, 0, 0, 0,
-                    0, 0, 0, 0,
-                    0, 0, 0, 0,
-                ),
-                score = 0,
-                selectedCellIndex = 0,
+                boardValues = previewBoardValues,
+                boardTiles = previewBoardValues.toPreviewBoardTiles(),
+                score = 8,
+                selectedCellIndex = null,
                 canUndo = true,
                 canReset = true,
                 canAnalyze = true,
+                isInteractionLocked = false,
                 animateRecommendationChanges = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(
-                        direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Up,
-                        confidencePercent = 0f,
+                        direction = AisolverRecommendationDirection.Up,
+                        confidencePercent = 42.8f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Right,
-                        confidencePercent = 0f,
+                        direction = AisolverRecommendationDirection.Right,
+                        confidencePercent = 28.4f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Left,
-                        confidencePercent = 0f,
+                        direction = AisolverRecommendationDirection.Left,
+                        confidencePercent = 18.1f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Down,
-                        confidencePercent = 0f,
+                        direction = AisolverRecommendationDirection.Down,
+                        confidencePercent = 10.7f,
                     ),
                 ),
             ),
@@ -296,3 +331,14 @@ private fun WorkspaceScreenPreview() {
         )
     }
 }
+
+private fun List<Int>.toPreviewBoardTiles(): List<WorkspaceBoardTileUi> =
+    mapIndexedNotNull { cellIndex, value ->
+        value.takeIf { tileValue -> tileValue != 0 }?.let { tileValue ->
+            WorkspaceBoardTileUi(
+                id = "tile-$cellIndex",
+                value = tileValue,
+                cellIndex = cellIndex,
+            )
+        }
+    }

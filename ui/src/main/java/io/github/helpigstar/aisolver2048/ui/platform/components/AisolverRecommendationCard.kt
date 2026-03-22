@@ -25,6 +25,7 @@ object AisolverRecommendationCardDefaults {
 fun AisolverRecommendationCard(
     recommendations: List<AisolverRecommendation>,
     onAnalyzeClick: () -> Unit,
+    onRecommendationClick: ((AisolverRecommendationDirection) -> Unit)? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     animateRecommendationChanges: Boolean = true,
@@ -56,6 +57,7 @@ fun AisolverRecommendationCard(
             AisolverRecommendationList(
                 recommendations = recommendations,
                 animateRecommendationChanges = animateRecommendationChanges,
+                onRecommendationClick = onRecommendationClick,
             )
         }
     }

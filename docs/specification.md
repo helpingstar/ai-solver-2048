@@ -94,10 +94,13 @@ AI는 흐름 강제자가 아니다. 사용자는 항상 분석 결과를 따를
 •	Phase 1에서는 Clear / 2 / 4 중심의 빠른 수정을 지원
 
 5.2 방향 적용
-Phase 1에서는 구현 범위에서 제외한다.
-•	swipe 미구현
-•	방향 버튼 미구현
-•	추천 결과 row tap 미구현
+Phase 1 확장 기준:
+•	board swipe로 `Up / Right / Left / Down` move를 적용한다.
+•	recommendation row tap으로도 동일한 move action을 적용한다.
+•	별도의 move controls row와 방향 버튼은 추가하지 않는다.
+•	이동 규칙은 표준 2048의 `slide + merge`를 따른다.
+•	random spawn은 자동 생성하지 않는다.
+•	move가 실제로 적용되면 score는 즉시 갱신된다.
 
 5.3 AI 추천
 Phase 1 기준:
@@ -151,6 +154,7 @@ Score 정책
 •	swipe
 •	방향 버튼
 •	추천 row tap
+•	move 애니메이션 진행 중에도 동일 입력을 모두 잠근다.
 
 선택 규칙:
 •	셀 탭 시 해당 셀 선택
@@ -168,12 +172,12 @@ Score 정책
 
 동작 규칙:
 •	카드는 비어 있지 않고 항상 현재 UI 구조를 유지한다.
-•	row tap 동작은 아직 구현하지 않는다.
+•	row tap은 board에 값이 있고 셀 선택 상태가 아닐 때 방향 입력으로 동작한다.
 •	board에 값이 있으면 Analyze 버튼이 활성화된다.
 •	Analyze 클릭 시 임시 난수 분석 결과로 갱신한다.
 •	Analyze 결과로 순위 변경 시 row 이동 애니메이션을 적용한다.
 •	Analyze 결과의 percent 값은 부드럽게 변화한다.
-•	placeholder 복귀는 애니메이션 없이 즉시 반영한다.
+•	edit / undo / reset / move로 placeholder로 돌아갈 때는 애니메이션 없이 즉시 반영한다.
 •	actual on-device AI 분석 및 best move 강조는 차기 단계에서 구현한다.
 
 6.4 하단 컨트롤 영역
@@ -250,24 +254,32 @@ Phase 1에서는 More bottom sheet를 구현하지 않는다.
 9. 방향 적용 및 상태 전이 정책
 
 9.1 방향 적용 수단
-
-Phase 1에서는 방향 적용을 구현 범위에서 제외한다.
-•	swipe 미구현
-•	방향 버튼 미구현
-•	추천 row tap 미구현
+Phase 1 확장 기준:
+•	swipe 구현
+•	추천 row tap 구현
+•	방향 버튼은 여전히 미구현
+•	swipe와 row tap은 동일 move action으로 수렴한다.
 
 9.2 방향 적용 직후 처리
-
-차기 단계에서 정의한다.
+•	move가 성공하면 board와 score를 즉시 최종값으로 갱신한다.
+•	recommendation은 현재 순서를 유지한 채 `0.0%` placeholder로 즉시 초기화한다.
+•	move 애니메이션 중에는 board tap/swipe, recommendation row tap, Analyze, Undo, Reset, edit controls를 모두 잠근다.
+•	move가 실제로 일어나지 않으면 board, score, recommendation, undo history를 변경하지 않는다.
 
 9.3 random spawn 정책
 •	앱은 random spawn을 자동 생성하지 않음
 •	spawn helper도 제공하지 않음
-•	Phase 1에서는 move 기능이 없으므로 spawn 관련 UI도 함께 제외한다.
+•	move 기능이 있더라도 spawn 관련 UI는 계속 제외한다.
 
 9.4 설계 의도
 
 이 앱은 게임 규칙을 완전히 강제하는 UI가 아니라, 사용자가 원하는 상태를 실험할 수 있는 모델링 도구다. 따라서 move 이후 새 타일 반영은 사용자가 필요할 때 직접 수행한다.
+
+9.5 move 애니메이션 정책
+•	일반 이동 타일은 source cell에서 target cell로 슬라이드한다.
+•	merge가 발생하면 두 source tile이 같은 target cell로 모인다.
+•	source tile 이동이 끝난 뒤 결과 tile이 `Merged` pop 애니메이션으로 나타난다.
+•	score 표시는 move 시작 시점에 즉시 최종값으로 갱신한다.
 
 ⸻
 
@@ -280,6 +292,8 @@ Undo는 transaction 단위로 동작한다.
 예시:
 •	셀 1회 수정 = 1 transaction
 •	Reset 1회 = 1 transaction
+•	swipe 1회 성공 = 1 transaction
+•	recommendation row tap 1회 성공 = 1 transaction
 
 추가 규칙:
 •	Undo는 board와 score 같은 domain 상태를 복구한다.
@@ -336,7 +350,7 @@ Flow 4. 전체 초기화
 
 이 앱의 UX는 다음 문장으로 요약된다.
 
-빈 4x4 board에서 시작하는 단일 workspace 화면에서, 사용자는 셀을 선택해 Clear / 2 / 4로 상태를 빠르게 수정하고, Undo / Reset으로 작업을 복구하거나 초기화한다. AI 카드와 추가 편집 액션은 자리와 구조를 먼저 고정하되 실제 분석, move 적용, More sheet는 다음 단계로 분리한다.
+빈 4x4 board에서 시작하는 단일 workspace 화면에서, 사용자는 셀을 선택해 Clear / 2 / 4로 상태를 빠르게 수정하고, Undo / Reset으로 작업을 복구하거나 초기화한다. 또한 비선택 상태에서는 board swipe 또는 recommendation row tap으로 `slide + merge` move를 적용하고, 필요할 때 Analyze로 임시 AI 확률을 다시 계산한다. More sheet와 실제 on-device AI는 다음 단계로 분리한다.
 
 ⸻
 
@@ -365,7 +379,7 @@ Flow 4. 전체 초기화
 14.2 Compose 관점의 주의점
 •	board 상태, 선택 상태, 결과 카드 상태는 단일 source of truth에서 관리한다.
 •	셀 선택/해제와 하단 toolbar 전환은 recomposition 비용이 낮게 유지되도록 구조화한다.
-•	차기 단계에서 swipe, button, row tap을 추가할 경우 동일한 move action으로 수렴시킨다.
+•	swipe와 row tap은 동일한 move action으로 수렴시킨다.
 •	Undo는 transaction 단위 상태 스냅샷 또는 action log 기반으로 일관되게 처리한다.
 
 ⸻
@@ -377,6 +391,8 @@ Flow 4. 전체 초기화
 •	4x4 classic 2048 board
 •	단일 workspace 화면
 •	수동 보드 편집
+•	swipe / recommendation row tap 기반 방향 적용
+•	slide + merge
 •	Undo / Reset
 •	선택 셀 강조 및 선택 해제
 •	수동 Analyze 버튼
@@ -385,7 +401,6 @@ Flow 4. 전체 초기화
 •	confidence percent 소수 1자리 표시
 
 제외
-•	방향 적용
 •	실제 on-device AI 분석
 •	자동 spawn
 •	spawn helper
@@ -444,11 +459,12 @@ Flow 4. 전체 초기화
 6.2 중앙 Board 영역 대응 UI
 •	Board 전체 조합: `AisolverBoard.kt`
 •	숫자 타일: `AisolverTile.kt`
-•	셀 선택 overlay 및 tap 처리: `AisolverBoard.kt`
+•	셀 선택 overlay, tap 처리, swipe 처리: `AisolverBoard.kt`
 
 이 피쳐를 수정할 때의 기준
 •	보드 전체 배치, 타일 위치, 선택 셀 강조는 `AisolverBoard.kt`에서 조정한다.
-•	타일 값별 색상, 글자 크기, motion은 `AisolverTile.kt`를 사용한다.
+•	타일 값별 색상과 글자 크기는 `AisolverTile.kt`를 사용한다.
+•	slide / merge motion과 swipe gesture는 `AisolverBoard.kt`, `WorkspaceViewModel.kt`, `WorkspaceManager.kt`를 함께 본다.
 
 6.3 하단 AI 결과 카드 대응 UI
 •	결과 카드 전체: `AisolverRecommendationCard.kt`
@@ -460,6 +476,7 @@ Flow 4. 전체 초기화
 •	카드 구조와 row UI는 공용 컴포넌트 원형을 유지한다.
 •	Phase 1에서는 `WorkspaceManager.kt`가 임시 난수 결과를 생성하고 `WorkspaceViewModel.kt`가 이를 상태에 반영한다.
 •	순위 이동 애니메이션과 값 변화 애니메이션은 `AisolverRecommendationList.kt`, `AisolverRecommendationItem.kt`에서 처리한다.
+•	row tap을 통한 방향 적용 연결은 `WorkspaceScreen.kt`와 `WorkspaceViewModel.kt`에서 제어한다.
 •	카드의 활성/비활성 상태만 화면 조합 쪽에서 제어한다.
 
 6.4 하단 컨트롤 영역 대응 UI
@@ -494,6 +511,7 @@ Flow 4. 전체 초기화
 이 피쳐를 수정할 때의 기준
 •	Undo / Reset의 노출 위치를 유지하려면 `WorkspaceStatusSection`을 수정한다.
 •	동작 연결은 `WorkspaceViewModel.kt`와 `WorkspaceManager.kt`를 기준으로 본다.
+•	move animation 중 입력 잠금 정책을 바꿀 때는 Header 버튼, Board, Recommendation card를 함께 본다.
 
 16.5 재사용 우선순위
 

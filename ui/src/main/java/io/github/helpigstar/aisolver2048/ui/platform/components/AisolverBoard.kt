@@ -3,8 +3,9 @@ package io.github.helpigstar.aisolver2048.ui.platform.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,14 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -57,6 +59,13 @@ data class AisolverBoardPosition(
     val row: Int,
     val column: Int,
 )
+
+enum class AisolverBoardSwipeDirection {
+    Up,
+    Right,
+    Left,
+    Down,
+}
 
 enum class AisolverBoardTileMotionState {
     Static,
@@ -91,6 +100,7 @@ fun AisolverBoard(
     emptyCellColor: Color = defaultAisolverColorScheme.board.cell,
     selectedPosition: AisolverBoardPosition? = null,
     onCellClick: ((AisolverBoardPosition) -> Unit)? = null,
+    onSwipe: ((AisolverBoardSwipeDirection) -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
@@ -109,10 +119,11 @@ fun AisolverBoard(
             }
         }
 
-        if (selectedPosition != null || onCellClick != null) {
+        if (selectedPosition != null || onCellClick != null || onSwipe != null) {
             CellSelectionGrid(
                 selectedPosition = selectedPosition,
                 onCellClick = onCellClick,
+                onSwipe = onSwipe,
             )
         }
     }
@@ -148,6 +159,7 @@ private fun EmptyBoardGrid(
 private fun CellSelectionGrid(
     selectedPosition: AisolverBoardPosition?,
     onCellClick: ((AisolverBoardPosition) -> Unit)?,
+    onSwipe: ((AisolverBoardSwipeDirection) -> Unit)?,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
@@ -171,14 +183,58 @@ private fun CellSelectionGrid(
                         )
 
                     Box(
-                        modifier = if (onCellClick == null) {
+                        modifier = if (onCellClick == null && onSwipe == null) {
                             cellModifier
                         } else {
-                            cellModifier.clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { onCellClick(position) },
-                            )
+                            cellModifier.pointerInput(position, onCellClick, onSwipe) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    var totalHorizontalDrag = 0f
+                                    var totalVerticalDrag = 0f
+                                    var passedTouchSlop = false
+                                    var pointerStillPressed = true
+
+                                    while (pointerStillPressed) {
+                                        val event = awaitPointerEvent()
+                                        val change = event.changes.firstOrNull { pointerChange ->
+                                            pointerChange.id == down.id
+                                        } ?: break
+
+                                        totalHorizontalDrag += change.position.x - change.previousPosition.x
+                                        totalVerticalDrag += change.position.y - change.previousPosition.y
+
+                                        if (
+                                            !passedTouchSlop &&
+                                            (
+                                                abs(totalHorizontalDrag) > viewConfiguration.touchSlop ||
+                                                    abs(totalVerticalDrag) > viewConfiguration.touchSlop
+                                                )
+                                        ) {
+                                            passedTouchSlop = true
+                                        }
+
+                                        if (passedTouchSlop) {
+                                            change.consume()
+                                        }
+
+                                        pointerStillPressed = change.pressed
+                                    }
+
+                                    val swipeDirection = if (passedTouchSlop) {
+                                        resolveSwipeDirection(
+                                            horizontalDistance = totalHorizontalDrag,
+                                            verticalDistance = totalVerticalDrag,
+                                        )
+                                    } else {
+                                        null
+                                    }
+
+                                    when {
+                                        swipeDirection != null && onSwipe != null -> onSwipe(swipeDirection)
+                                        !passedTouchSlop -> onCellClick?.invoke(position)
+                                    }
+                                }
+                            }
                         },
                     )
                 }
@@ -330,6 +386,22 @@ private fun initialScaleFor(
     AisolverBoardTileMotionState.Spawned -> 0f
     AisolverBoardTileMotionState.Merged -> 0.92f
 }
+
+private fun resolveSwipeDirection(
+    horizontalDistance: Float,
+    verticalDistance: Float,
+): AisolverBoardSwipeDirection =
+    if (abs(horizontalDistance) >= abs(verticalDistance)) {
+        if (horizontalDistance >= 0f) {
+            AisolverBoardSwipeDirection.Right
+        } else {
+            AisolverBoardSwipeDirection.Left
+        }
+    } else if (verticalDistance >= 0f) {
+        AisolverBoardSwipeDirection.Down
+    } else {
+        AisolverBoardSwipeDirection.Up
+    }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
