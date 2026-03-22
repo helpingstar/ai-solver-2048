@@ -3,6 +3,7 @@ package io.github.helpigstar.aisolver2048.ui.platform.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -87,6 +89,8 @@ fun AisolverBoard(
     modifier: Modifier = Modifier,
     boardColor: Color = defaultAisolverColorScheme.board.background,
     emptyCellColor: Color = defaultAisolverColorScheme.board.cell,
+    selectedPosition: AisolverBoardPosition? = null,
+    onCellClick: ((AisolverBoardPosition) -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
@@ -103,6 +107,13 @@ fun AisolverBoard(
                     AnimatedBoardTile(tile = tile)
                 }
             }
+        }
+
+        if (selectedPosition != null || onCellClick != null) {
+            CellSelectionGrid(
+                selectedPosition = selectedPosition,
+                onCellClick = onCellClick,
+            )
         }
     }
 }
@@ -126,6 +137,49 @@ private fun EmptyBoardGrid(
                                 color = emptyCellColor,
                                 shape = AisolverBoardDefaults.CellShape,
                             ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CellSelectionGrid(
+    selectedPosition: AisolverBoardPosition?,
+    onCellClick: ((AisolverBoardPosition) -> Unit)?,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
+    ) {
+        repeat(AisolverBoardDefaults.GridSize) { row ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
+            ) {
+                repeat(AisolverBoardDefaults.GridSize) { column ->
+                    val position = AisolverBoardPosition(row = row, column = column)
+                    val isSelected = position == selectedPosition
+                    val cellModifier = Modifier
+                        .size(AisolverBoardDefaults.CellSize)
+                        .background(
+                            color = if (isSelected) {
+                                defaultAisolverColorScheme.board.cellSelected
+                            } else {
+                                Color.Transparent
+                            },
+                            shape = AisolverBoardDefaults.CellShape,
+                        )
+
+                    Box(
+                        modifier = if (onCellClick == null) {
+                            cellModifier
+                        } else {
+                            cellModifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onCellClick(position) },
+                            )
+                        },
                     )
                 }
             }
