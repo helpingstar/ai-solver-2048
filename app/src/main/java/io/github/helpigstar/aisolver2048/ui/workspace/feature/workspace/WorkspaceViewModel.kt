@@ -10,7 +10,7 @@ import javax.inject.Inject
 class WorkspaceViewModel @Inject constructor() :
     BaseViewModel<WorkspaceState, Unit, WorkspaceAction>(
         initialState = WorkspaceState(
-            title = "Workspace",
+            title = "AI Solver 2048",
             description = "온보딩이 완료된 후 진입하는 메인 화면입니다.",
         ),
     ) {

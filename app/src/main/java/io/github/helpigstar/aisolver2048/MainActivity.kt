@@ -16,7 +16,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.helpigstar.aisolver2048.ui.platform.components.util.rememberAisolver2048NavController
-import io.github.helpigstar.aisolver2048.ui.platform.components.workspace.AisolverWorkspaceScreen
 import io.github.helpigstar.aisolver2048.ui.platform.feature.rootnav.RootNavigationRoute
 import io.github.helpigstar.aisolver2048.ui.platform.feature.rootnav.rootNavDestination
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
