@@ -71,7 +71,6 @@ private fun WorkspaceScreen(
                 .padding(paddingValues)
                 .consumeWindowInsets(paddingValues)
                 .imePadding()
-                .verticalScroll(rememberScrollState())
                 .padding(top = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),

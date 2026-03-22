@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -161,7 +162,81 @@ private fun CellSelectionGrid(
     onCellClick: ((AisolverBoardPosition) -> Unit)?,
     onSwipe: ((AisolverBoardSwipeDirection) -> Unit)?,
 ) {
+    val interactionModifier = if (onCellClick == null && onSwipe == null) {
+        Modifier
+    } else {
+        Modifier.pointerInput(onCellClick, onSwipe) {
+            val cellSizePx = AisolverBoardDefaults.CellSize.toPx()
+            val stepPx = (AisolverBoardDefaults.CellSize + AisolverBoardDefaults.CellGap).toPx()
+
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val startPosition = down.position
+                var totalHorizontalDrag = 0f
+                var totalVerticalDrag = 0f
+                var passedTouchSlop = false
+                var pointerStillPressed = true
+                var shouldIgnoreGesture = false
+
+                while (pointerStillPressed) {
+                    val event = awaitPointerEvent()
+                    if (event.changes.count { pointerChange -> pointerChange.pressed } > 1) {
+                        shouldIgnoreGesture = true
+                    }
+
+                    val change = event.changes.firstOrNull { pointerChange ->
+                        pointerChange.id == down.id
+                    } ?: break
+
+                    totalHorizontalDrag += change.position.x - change.previousPosition.x
+                    totalVerticalDrag += change.position.y - change.previousPosition.y
+
+                    if (
+                        !passedTouchSlop &&
+                        (
+                            abs(totalHorizontalDrag) > viewConfiguration.touchSlop ||
+                                abs(totalVerticalDrag) > viewConfiguration.touchSlop
+                            )
+                    ) {
+                        passedTouchSlop = true
+                    }
+
+                    if (passedTouchSlop) {
+                        change.consume()
+                    }
+
+                    pointerStillPressed = change.pressed
+                }
+
+                if (shouldIgnoreGesture) {
+                    return@awaitEachGesture
+                }
+
+                val swipeDirection = if (passedTouchSlop) {
+                    resolveSwipeDirection(
+                        horizontalDistance = totalHorizontalDrag,
+                        verticalDistance = totalVerticalDrag,
+                    )
+                } else {
+                    null
+                }
+
+                when {
+                    swipeDirection != null && onSwipe != null -> onSwipe(swipeDirection)
+                    !passedTouchSlop -> onCellClick?.let { handler ->
+                        resolveTappedCell(
+                            offset = startPosition,
+                            cellSizePx = cellSizePx,
+                            stepPx = stepPx,
+                        )?.let(handler)
+                    }
+                }
+            }
+        }
+    }
+
     Column(
+        modifier = interactionModifier,
         verticalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
     ) {
         repeat(AisolverBoardDefaults.GridSize) { row ->
@@ -183,59 +258,7 @@ private fun CellSelectionGrid(
                         )
 
                     Box(
-                        modifier = if (onCellClick == null && onSwipe == null) {
-                            cellModifier
-                        } else {
-                            cellModifier.pointerInput(position, onCellClick, onSwipe) {
-                                awaitEachGesture {
-                                    val down = awaitFirstDown(requireUnconsumed = false)
-                                    var totalHorizontalDrag = 0f
-                                    var totalVerticalDrag = 0f
-                                    var passedTouchSlop = false
-                                    var pointerStillPressed = true
-
-                                    while (pointerStillPressed) {
-                                        val event = awaitPointerEvent()
-                                        val change = event.changes.firstOrNull { pointerChange ->
-                                            pointerChange.id == down.id
-                                        } ?: break
-
-                                        totalHorizontalDrag += change.position.x - change.previousPosition.x
-                                        totalVerticalDrag += change.position.y - change.previousPosition.y
-
-                                        if (
-                                            !passedTouchSlop &&
-                                            (
-                                                abs(totalHorizontalDrag) > viewConfiguration.touchSlop ||
-                                                    abs(totalVerticalDrag) > viewConfiguration.touchSlop
-                                                )
-                                        ) {
-                                            passedTouchSlop = true
-                                        }
-
-                                        if (passedTouchSlop) {
-                                            change.consume()
-                                        }
-
-                                        pointerStillPressed = change.pressed
-                                    }
-
-                                    val swipeDirection = if (passedTouchSlop) {
-                                        resolveSwipeDirection(
-                                            horizontalDistance = totalHorizontalDrag,
-                                            verticalDistance = totalVerticalDrag,
-                                        )
-                                    } else {
-                                        null
-                                    }
-
-                                    when {
-                                        swipeDirection != null && onSwipe != null -> onSwipe(swipeDirection)
-                                        !passedTouchSlop -> onCellClick?.invoke(position)
-                                    }
-                                }
-                            }
-                        },
+                        modifier = cellModifier,
                     )
                 }
             }
@@ -402,6 +425,31 @@ private fun resolveSwipeDirection(
     } else {
         AisolverBoardSwipeDirection.Up
     }
+
+private fun resolveTappedCell(
+    offset: Offset,
+    cellSizePx: Float,
+    stepPx: Float,
+): AisolverBoardPosition? {
+    if (offset.x < 0f || offset.y < 0f) return null
+
+    val column = (offset.x / stepPx).toInt()
+    val row = (offset.y / stepPx).toInt()
+    if (row !in 0 until AisolverBoardDefaults.GridSize || column !in 0 until AisolverBoardDefaults.GridSize) {
+        return null
+    }
+
+    val localX = offset.x - (column * stepPx)
+    val localY = offset.y - (row * stepPx)
+    if (localX >= cellSizePx || localY >= cellSizePx) {
+        return null
+    }
+
+    return AisolverBoardPosition(
+        row = row,
+        column = column,
+    )
+}
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
