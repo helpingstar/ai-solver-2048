@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
+import java.util.Locale
+import kotlin.math.floor
 
 enum class AisolverRecommendationDirection(
     val label: String,
@@ -68,11 +70,11 @@ object AisolverRecommendationItemDefaults {
 @Composable
 fun AisolverRecommendationItem(
     direction: AisolverRecommendationDirection,
-    confidencePercent: Int,
+    confidencePercent: Float,
     modifier: Modifier = Modifier,
     showDivider: Boolean = true,
 ) {
-    val resolvedConfidencePercent = confidencePercent.coerceIn(minimumValue = 0, maximumValue = 100)
+    val resolvedConfidencePercent = confidencePercent.coerceIn(minimumValue = 0f, maximumValue = 100f)
 
     Column(
         modifier = modifier,
@@ -112,7 +114,7 @@ fun AisolverRecommendationItem(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "${resolvedConfidencePercent}%",
+                text = resolvedConfidencePercent.toDisplayPercent(),
                 color = AisolverRecommendationItemDefaults.ConfidenceColor,
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
@@ -131,13 +133,18 @@ fun AisolverRecommendationItem(
     }
 }
 
+private fun Float.toDisplayPercent(): String {
+    val flooredPercent = floor(this * 10f) / 10f
+    return String.format(Locale.US, "%.1f%%", flooredPercent)
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
 private fun AisolverRecommendationItemPreview() {
     MaterialTheme {
         AisolverRecommendationItem(
             direction = AisolverRecommendationDirection.Up,
-            confidencePercent = 78,
+            confidencePercent = 78f,
             modifier = Modifier
                 .padding(16.dp)
                 .width(353.dp),
@@ -158,19 +165,19 @@ private fun AisolverRecommendationItemListPreview() {
         ) {
             AisolverRecommendationItem(
                 direction = AisolverRecommendationDirection.Up,
-                confidencePercent = 78,
+                confidencePercent = 78f,
             )
             AisolverRecommendationItem(
                 direction = AisolverRecommendationDirection.Right,
-                confidencePercent = 78,
+                confidencePercent = 78f,
             )
             AisolverRecommendationItem(
                 direction = AisolverRecommendationDirection.Left,
-                confidencePercent = 78,
+                confidencePercent = 78f,
             )
             AisolverRecommendationItem(
                 direction = AisolverRecommendationDirection.Down,
-                confidencePercent = 78,
+                confidencePercent = 78f,
             )
         }
     }

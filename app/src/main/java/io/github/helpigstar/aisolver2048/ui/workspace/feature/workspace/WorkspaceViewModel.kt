@@ -4,6 +4,8 @@ import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationDirection
+import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationProbability
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceManager
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceSnapshot
 import io.github.helpigstar.aisolver2048.ui.platform.base.BaseViewModel
@@ -42,6 +44,7 @@ class WorkspaceViewModel @Inject constructor(
                     boardValues = it.boardValues,
                     score = it.score,
                 ),
+                canAnalyze = canAnalyze(it.boardValues),
             )
         }
 
@@ -55,6 +58,7 @@ class WorkspaceViewModel @Inject constructor(
             is WorkspaceAction.CellClick -> handleCellClick(action.cellIndex)
             WorkspaceAction.ClearSelectedCellClick -> updateSelectedCellValue(EMPTY_CELL_VALUE)
             WorkspaceAction.ResetClick -> handleResetClick()
+            WorkspaceAction.AnalyzeClick -> handleAnalyzeClick()
             WorkspaceAction.SetSelectedCellValueToFourClick -> updateSelectedCellValue(4)
             WorkspaceAction.SetSelectedCellValueToTwoClick -> updateSelectedCellValue(2)
             WorkspaceAction.UndoClick -> handleUndoClick()
@@ -120,6 +124,20 @@ class WorkspaceViewModel @Inject constructor(
         }
     }
 
+    private fun handleAnalyzeClick() {
+        if (!state.canAnalyze) return
+
+        val generatedRecommendations = workspaceManager
+            .generateRecommendations(snapshot = state.toSnapshot())
+            .map { recommendation ->
+                recommendation.toUiModel()
+            }
+
+        mutableStateFlow.update { currentState ->
+            currentState.copy(recommendations = generatedRecommendations)
+        }
+    }
+
     private fun pushUndoSnapshot(snapshot: WorkspaceSnapshot) {
         undoHistory.add(snapshot)
         persistUndoHistory()
@@ -137,13 +155,14 @@ data class WorkspaceState(
     val selectedCellIndex: Int?,
     val canUndo: Boolean,
     val canReset: Boolean,
+    val canAnalyze: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
 ) : Parcelable
 
 @Parcelize
 data class WorkspaceRecommendationUi(
     val direction: AisolverRecommendationDirection,
-    val confidencePercent: Int,
+    val confidencePercent: Float,
 ) : Parcelable
 
 sealed class WorkspaceAction {
@@ -152,6 +171,8 @@ sealed class WorkspaceAction {
     data object UndoClick : WorkspaceAction()
 
     data object ResetClick : WorkspaceAction()
+
+    data object AnalyzeClick : WorkspaceAction()
 
     data object ClearSelectedCellClick : WorkspaceAction()
 
@@ -179,6 +200,7 @@ private fun WorkspaceSnapshot.toState(
             boardValues = boardValues,
             score = score,
         ),
+        canAnalyze = canAnalyze(boardValues),
         recommendations = defaultWorkspaceRecommendations(),
     )
 
@@ -187,22 +209,40 @@ private fun canReset(
     score: Int,
 ): Boolean = boardValues.any { value -> value != EMPTY_CELL_VALUE } || score != 0
 
+private fun canAnalyze(
+    boardValues: List<Int>,
+): Boolean = boardValues.any { value -> value != EMPTY_CELL_VALUE }
+
 private fun defaultWorkspaceRecommendations(): List<WorkspaceRecommendationUi> =
     listOf(
         WorkspaceRecommendationUi(
             direction = AisolverRecommendationDirection.Up,
-            confidencePercent = 0,
+            confidencePercent = 0f,
         ),
         WorkspaceRecommendationUi(
             direction = AisolverRecommendationDirection.Right,
-            confidencePercent = 0,
+            confidencePercent = 0f,
         ),
         WorkspaceRecommendationUi(
             direction = AisolverRecommendationDirection.Left,
-            confidencePercent = 0,
+            confidencePercent = 0f,
         ),
         WorkspaceRecommendationUi(
             direction = AisolverRecommendationDirection.Down,
-            confidencePercent = 0,
+            confidencePercent = 0f,
         ),
     )
+
+private fun WorkspaceRecommendationProbability.toUiModel(): WorkspaceRecommendationUi =
+    WorkspaceRecommendationUi(
+        direction = direction.toUiDirection(),
+        confidencePercent = confidencePercent,
+    )
+
+private fun WorkspaceRecommendationDirection.toUiDirection(): AisolverRecommendationDirection =
+    when (this) {
+        WorkspaceRecommendationDirection.Up -> AisolverRecommendationDirection.Up
+        WorkspaceRecommendationDirection.Right -> AisolverRecommendationDirection.Right
+        WorkspaceRecommendationDirection.Left -> AisolverRecommendationDirection.Left
+        WorkspaceRecommendationDirection.Down -> AisolverRecommendationDirection.Down
+    }

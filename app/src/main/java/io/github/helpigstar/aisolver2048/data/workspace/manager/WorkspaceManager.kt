@@ -13,6 +13,10 @@ interface WorkspaceManager {
     ): WorkspaceSnapshot
 
     fun reset(): WorkspaceSnapshot
+
+    fun generateRecommendations(
+        snapshot: WorkspaceSnapshot,
+    ): List<WorkspaceRecommendationProbability>
 }
 
 @Parcelize
@@ -20,3 +24,15 @@ data class WorkspaceSnapshot(
     val boardValues: List<Int>,
     val score: Int,
 ) : Parcelable
+
+data class WorkspaceRecommendationProbability(
+    val direction: WorkspaceRecommendationDirection,
+    val confidencePercent: Float,
+)
+
+enum class WorkspaceRecommendationDirection {
+    Up,
+    Right,
+    Left,
+    Down,
+}

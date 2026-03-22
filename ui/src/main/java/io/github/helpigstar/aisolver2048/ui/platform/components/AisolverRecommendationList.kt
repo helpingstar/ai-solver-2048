@@ -13,7 +13,7 @@ import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolver
 
 data class AisolverRecommendation(
     val direction: AisolverRecommendationDirection,
-    val confidencePercent: Int,
+    val confidencePercent: Float,
 )
 
 object AisolverRecommendationListDefaults {
@@ -48,19 +48,19 @@ private fun AisolverRecommendationListPreview() {
             recommendations = listOf(
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Up,
-                    confidencePercent = 78,
+                    confidencePercent = 78f,
                 ),
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Right,
-                    confidencePercent = 15,
+                    confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Left,
-                    confidencePercent = 15,
+                    confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Down,
-                    confidencePercent = 15,
+                    confidencePercent = 15f,
                 ),
             ),
             modifier = Modifier.width(353.dp),

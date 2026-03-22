@@ -65,19 +65,19 @@ private fun AisolverRecommendationCardPreview() {
             recommendations = listOf(
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Up,
-                    confidencePercent = 78,
+                    confidencePercent = 78f,
                 ),
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Right,
-                    confidencePercent = 15,
+                    confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Left,
-                    confidencePercent = 15,
+                    confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
                     direction = AisolverRecommendationDirection.Down,
-                    confidencePercent = 15,
+                    confidencePercent = 15f,
                 ),
             ),
             onAnalyzeClick = {},

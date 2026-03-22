@@ -104,9 +104,12 @@ Phase 1 기준:
 •	하단 카드에 4방향 row를 항상 노출
 •	현재 공용 recommendation UI 형태를 그대로 유지
 •	각 row는 방향 + confidence percent 형태로 노출
-•	Phase 1에서는 placeholder 값으로 `0%`를 사용
-•	Analyze 버튼은 비활성화
-•	best move 강조 및 실제 ranking 계산은 차기 단계로 보류
+•	초기 placeholder 값으로 `0.0%`를 사용
+•	board에 값이 1개 이상 있으면 Analyze 버튼 활성화
+•	Analyze 클릭 시 임시 난수 확률 4개를 생성해 합이 `100f`가 되게 정규화
+•	리스트는 raw 확률 기준 내림차순으로 정렬
+•	화면 표시는 소수 1자리까지 내림
+•	이 임시 분석은 차후 on-device AI로 대체한다.
 
 5.4 Undo/Reset
 •	Undo는 transaction 단위
@@ -158,13 +161,14 @@ Score 정책
 포함 정보:
 •	4방향 row
 •	각 방향의 confidence percent
-•	Phase 1에서는 모든 값이 placeholder `0%`
+•	초기 상태에서는 placeholder `0.0%`
 
 동작 규칙:
 •	카드는 비어 있지 않고 항상 현재 UI 구조를 유지한다.
 •	row tap 동작은 아직 구현하지 않는다.
-•	Analyze 버튼은 노출하되 비활성화한다.
-•	actual AI 분석 및 best move 강조는 차기 단계에서 구현한다.
+•	board에 값이 있으면 Analyze 버튼이 활성화된다.
+•	Analyze 클릭 시 임시 난수 분석 결과로 갱신한다.
+•	actual on-device AI 분석 및 best move 강조는 차기 단계에서 구현한다.
 
 6.4 하단 컨트롤 영역
 
@@ -219,16 +223,19 @@ Phase 1에서는 More bottom sheet를 구현하지 않는다.
 8. AI 분석 UX 정책
 
 8.1 분석 갱신 방식
-•	Phase 1에서는 실제 분석을 수행하지 않는다.
+•	Phase 1에서는 on-device AI 대신 임시 난수 분석을 사용한다.
 •	결과 카드는 현재 recommendation UI 구조를 계속 유지한다.
-•	Analyze 버튼은 비활성화 상태다.
+•	Analyze는 사용자가 수동으로 실행한다.
+•	board 수정, Undo, Reset 시 결과는 다시 placeholder로 초기화된다.
 
 8.2 분석 강제 여부
-•	분석 기능 자체가 아직 비활성화되어 있다.
-•	수동 셀 편집과 undo/reset만 먼저 제공한다.
+•	분석은 자동으로 실행하지 않는다.
+•	사용자는 필요할 때만 Analyze를 누를 수 있다.
+•	수동 셀 편집과 undo/reset은 계속 우선 제공한다.
 
 8.3 결과 표현 방식
 •	현재 공용 recommendation 카드의 단일 percent 표현을 유지한다.
+•	표시 값은 소수 1자리까지 내림한다.
 •	보드 위 best move 강조는 아직 구현하지 않는다.
 •	추가 정량 정보는 차기 단계에서 별도 설계한다.
 
@@ -279,7 +286,7 @@ Reset은 전체 board를 초기화한다.
 Reset 후 상태:
 •	빈 4x4 board
 •	score = 0
-•	결과 카드는 `0%` placeholder 상태 유지
+•	결과 카드는 `0.0%` placeholder 상태 유지
 •	새 작업 시작 상태
 •	셀 선택 해제
 
@@ -366,13 +373,14 @@ Flow 4. 전체 초기화
 •	수동 보드 편집
 •	Undo / Reset
 •	선택 셀 강조 및 선택 해제
-•	AI 결과 카드 placeholder
+•	수동 Analyze 버튼
+•	임시 난수 recommendation 결과
 •	4방향 row 유지
-•	confidence percent placeholder 표시
+•	confidence percent 소수 1자리 표시
 
 제외
 •	방향 적용
-•	실제 AI 분석
+•	실제 on-device AI 분석
 •	자동 spawn
 •	spawn helper
 •	pending spawn UI 표시
@@ -444,7 +452,7 @@ Flow 4. 전체 초기화
 
 이 피쳐를 수정할 때의 기준
 •	카드 구조와 row UI는 공용 컴포넌트 원형을 유지한다.
-•	Phase 1에서는 실제 분석 대신 `WorkspaceViewModel.kt`에서 placeholder percent만 공급한다.
+•	Phase 1에서는 `WorkspaceManager.kt`가 임시 난수 결과를 생성하고 `WorkspaceViewModel.kt`가 이를 상태에 반영한다.
 •	카드의 활성/비활성 상태만 화면 조합 쪽에서 제어한다.
 
 6.4 하단 컨트롤 영역 대응 UI
@@ -469,7 +477,8 @@ Flow 4. 전체 초기화
 
 이 피쳐를 수정할 때의 기준
 •	Phase 1에서는 보드 위 best move 강조가 없다.
-•	현재 percent 기반 row 형태는 유지하고, 확장이 필요하면 별도 설계 합의 후 진행한다.
+•	현재 percent 기반 row 형태는 유지하고, 표시 값은 소수 1자리까지 내림한다.
+•	추가 확장이 필요하면 별도 설계 합의 후 진행한다.
 
 10. Undo / Reset 정책 대응 UI
 •	Undo / Reset 진입 버튼: `WorkspaceScreen.kt` 내부 `WorkspaceStatusSection`

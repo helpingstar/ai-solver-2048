@@ -91,9 +91,9 @@ private fun WorkspaceScreen(
             )
             AisolverRecommendationCard(
                 recommendations = state.recommendations.toRecommendationModels(),
-                onAnalyzeClick = {},
+                onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
                 modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                enabled = false,
+                enabled = state.canAnalyze,
             )
             if (state.selectedCellIndex != null) {
                 WorkspaceEditControls(
@@ -270,22 +270,23 @@ private fun WorkspaceScreenPreview() {
                 selectedCellIndex = 0,
                 canUndo = true,
                 canReset = true,
+                canAnalyze = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(
                         direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Up,
-                        confidencePercent = 0,
+                        confidencePercent = 0f,
                     ),
                     WorkspaceRecommendationUi(
                         direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Right,
-                        confidencePercent = 0,
+                        confidencePercent = 0f,
                     ),
                     WorkspaceRecommendationUi(
                         direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Left,
-                        confidencePercent = 0,
+                        confidencePercent = 0f,
                     ),
                     WorkspaceRecommendationUi(
                         direction = io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection.Down,
-                        confidencePercent = 0,
+                        confidencePercent = 0f,
                     ),
                 ),
             ),
