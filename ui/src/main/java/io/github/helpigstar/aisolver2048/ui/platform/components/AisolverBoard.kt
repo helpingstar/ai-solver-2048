@@ -176,12 +176,11 @@ private fun CellSelectionGrid(
                 var totalVerticalDrag = 0f
                 var passedTouchSlop = false
                 var pointerStillPressed = true
-                var shouldIgnoreGesture = false
 
                 while (pointerStillPressed) {
                     val event = awaitPointerEvent()
                     if (event.changes.count { pointerChange -> pointerChange.pressed } > 1) {
-                        shouldIgnoreGesture = true
+                        return@awaitEachGesture
                     }
 
                     val change = event.changes.firstOrNull { pointerChange ->
@@ -197,32 +196,28 @@ private fun CellSelectionGrid(
                             abs(totalHorizontalDrag) > viewConfiguration.touchSlop ||
                                 abs(totalVerticalDrag) > viewConfiguration.touchSlop
                             )
-                    ) {
+                        ) {
                         passedTouchSlop = true
                     }
 
                     if (passedTouchSlop) {
+                        if (onSwipe != null) {
+                            change.consume()
+                            onSwipe(
+                                resolveSwipeDirection(
+                                    horizontalDistance = totalHorizontalDrag,
+                                    verticalDistance = totalVerticalDrag,
+                                ),
+                            )
+                            return@awaitEachGesture
+                        }
                         change.consume()
                     }
 
                     pointerStillPressed = change.pressed
                 }
 
-                if (shouldIgnoreGesture) {
-                    return@awaitEachGesture
-                }
-
-                val swipeDirection = if (passedTouchSlop) {
-                    resolveSwipeDirection(
-                        horizontalDistance = totalHorizontalDrag,
-                        verticalDistance = totalVerticalDrag,
-                    )
-                } else {
-                    null
-                }
-
                 when {
-                    swipeDirection != null && onSwipe != null -> onSwipe(swipeDirection)
                     !passedTouchSlop -> onCellClick?.let { handler ->
                         resolveTappedCell(
                             offset = startPosition,
