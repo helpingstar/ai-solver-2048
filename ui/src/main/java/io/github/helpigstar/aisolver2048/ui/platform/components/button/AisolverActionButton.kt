@@ -1,27 +1,22 @@
 package io.github.helpigstar.aisolver2048.ui.platform.components.button
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
@@ -45,6 +40,7 @@ object AisolverActionButtonDefaults {
     val Size = 48.dp
     val IconSize = 24.dp
     val Shape: Shape = RoundedCornerShape(10.dp)
+    val ContentPadding = PaddingValues(12.dp)
 
     val ContainerColor: Color = defaultAisolverColorScheme.button.utilityBackground
     val DisabledContainerColor: Color = defaultAisolverColorScheme.button.utilityBackgroundDisabled
@@ -82,42 +78,35 @@ fun AisolverActionButton(
     disabledContentColor: Color = AisolverActionButtonDefaults.DisabledContentColor,
     shape: Shape = AisolverActionButtonDefaults.Shape,
 ) {
-    val resolvedContainerColor = if (enabled) {
-        containerColor
-    } else {
-        disabledContainerColor
-    }
-    val resolvedContentColor = if (enabled) {
-        contentColor
-    } else {
-        disabledContentColor
-    }
-
-    Box(
+    Button(
+        onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .size(AisolverActionButtonDefaults.Size)
-            .clip(shape)
-            .background(resolvedContainerColor)
-            .clickable(
-                enabled = enabled,
-                role = Role.Button,
-                onClick = onClick,
-            )
             .semantics {
-                role = Role.Button
                 if (contentDescription != null) {
                     this.contentDescription = contentDescription
                 }
-                if (!enabled) {
-                    disabled()
-                }
             },
-        contentAlignment = Alignment.Center,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+            disabledContainerColor = disabledContainerColor,
+            disabledContentColor = disabledContentColor,
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            focusedElevation = 0.dp,
+            hoveredElevation = 0.dp,
+            disabledElevation = 0.dp,
+        ),
+        contentPadding = AisolverActionButtonDefaults.ContentPadding,
     ) {
         Icon(
             painter = painterResource(id = iconResId),
             contentDescription = null,
-            tint = resolvedContentColor,
             modifier = Modifier.size(AisolverActionButtonDefaults.IconSize),
         )
     }
@@ -130,7 +119,6 @@ private fun AisolverActionButtonPreview() {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             AisolverActionButton(
                 variant = AisolverActionButtonVariant.Undo,
