@@ -56,8 +56,8 @@ enum class WorkspaceMoveTileMotionState {
 }
 
 enum class WorkspaceRecommendationDirection {
-    Up,
-    Right,
     Left,
+    Right,
+    Up,
     Down,
 }

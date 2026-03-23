@@ -232,7 +232,7 @@ private fun WorkspaceScreenPreview() {
                 animateRecommendationChanges = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(
-                        direction = AisolverRecommendationDirection.Up,
+                        direction = AisolverRecommendationDirection.Left,
                         confidencePercent = 42.8f,
                     ),
                     WorkspaceRecommendationUi(
@@ -240,7 +240,7 @@ private fun WorkspaceScreenPreview() {
                         confidencePercent = 28.4f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = AisolverRecommendationDirection.Left,
+                        direction = AisolverRecommendationDirection.Up,
                         confidencePercent = 18.1f,
                     ),
                     WorkspaceRecommendationUi(

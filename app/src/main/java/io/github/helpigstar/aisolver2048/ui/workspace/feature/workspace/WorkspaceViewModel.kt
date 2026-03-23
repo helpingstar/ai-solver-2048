@@ -363,24 +363,12 @@ private fun canMove(
 ): Boolean = canAnalyze(boardValues)
 
 private fun defaultWorkspaceRecommendations(): List<WorkspaceRecommendationUi> =
-    listOf(
+    AisolverRecommendationDirection.entries.map { direction ->
         WorkspaceRecommendationUi(
-            direction = AisolverRecommendationDirection.Up,
+            direction = direction,
             confidencePercent = 0f,
-        ),
-        WorkspaceRecommendationUi(
-            direction = AisolverRecommendationDirection.Right,
-            confidencePercent = 0f,
-        ),
-        WorkspaceRecommendationUi(
-            direction = AisolverRecommendationDirection.Left,
-            confidencePercent = 0f,
-        ),
-        WorkspaceRecommendationUi(
-            direction = AisolverRecommendationDirection.Down,
-            confidencePercent = 0f,
-        ),
-    )
+        )
+    }
 
 private fun List<Int>.toStaticBoardTiles(): List<WorkspaceBoardTileUi> =
     mapIndexedNotNull { cellIndex, value ->

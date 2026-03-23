@@ -39,17 +39,17 @@ enum class AisolverRecommendationDirection(
     val label: String,
     val iconResId: Int,
 ) {
-    Up(
-        label = "Up",
-        iconResId = AisolverDrawable.ic_upward,
+    Left(
+        label = "Left",
+        iconResId = AisolverDrawable.ic_backward,
     ),
     Right(
         label = "Right",
         iconResId = AisolverDrawable.ic_forward,
     ),
-    Left(
-        label = "Left",
-        iconResId = AisolverDrawable.ic_backward,
+    Up(
+        label = "Up",
+        iconResId = AisolverDrawable.ic_upward,
     ),
     Down(
         label = "Down",
@@ -190,7 +190,7 @@ private fun AisolverRecommendationItemListPreview() {
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
             AisolverRecommendationItem(
-                direction = AisolverRecommendationDirection.Up,
+                direction = AisolverRecommendationDirection.Left,
                 confidencePercent = 78f,
             )
             AisolverRecommendationItem(
@@ -198,7 +198,7 @@ private fun AisolverRecommendationItemListPreview() {
                 confidencePercent = 78f,
             )
             AisolverRecommendationItem(
-                direction = AisolverRecommendationDirection.Left,
+                direction = AisolverRecommendationDirection.Up,
                 confidencePercent = 78f,
             )
             AisolverRecommendationItem(

@@ -74,7 +74,7 @@ private fun AisolverRecommendationListPreview() {
         AisolverRecommendationList(
             recommendations = listOf(
                 AisolverRecommendation(
-                    direction = AisolverRecommendationDirection.Up,
+                    direction = AisolverRecommendationDirection.Left,
                     confidencePercent = 78f,
                 ),
                 AisolverRecommendation(
@@ -82,7 +82,7 @@ private fun AisolverRecommendationListPreview() {
                     confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
-                    direction = AisolverRecommendationDirection.Left,
+                    direction = AisolverRecommendationDirection.Up,
                     confidencePercent = 15f,
                 ),
                 AisolverRecommendation(

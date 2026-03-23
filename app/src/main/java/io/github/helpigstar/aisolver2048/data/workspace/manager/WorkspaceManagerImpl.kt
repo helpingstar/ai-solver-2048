@@ -146,9 +146,11 @@ class WorkspaceManagerImpl : WorkspaceManager {
                     confidencePercent = (recommendation.confidencePercent / totalConfidence) * 100f,
                 )
             }
-        }.sortedByDescending { recommendation ->
-            recommendation.confidencePercent
-        }
+        }.sortedWith(
+            compareByDescending<WorkspaceRecommendationProbability> { recommendation ->
+                recommendation.confidencePercent
+            }.thenBy { recommendation -> recommendation.direction.ordinal },
+        )
     }
 
     private fun isValidBoardValue(value: Int): Boolean =
