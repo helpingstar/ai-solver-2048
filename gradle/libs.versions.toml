@@ -27,6 +27,7 @@ kotlinxSerialization = "1.10.0"
 material = "1.13.0"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutines = "1.10.2"
+googleAiEdgeLitert = "2.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -57,6 +58,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+google-ai-edge-litert = { module = "com.google.ai.edge.litert:litert", version.ref = "googleAiEdgeLitert" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
