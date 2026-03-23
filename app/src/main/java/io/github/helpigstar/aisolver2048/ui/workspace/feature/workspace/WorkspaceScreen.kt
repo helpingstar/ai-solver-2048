@@ -104,7 +104,11 @@ private fun WorkspaceScreen(
                     null
                 },
                 modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                enabled = state.canAnalyze && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
+                enabled = state.canAnalyze &&
+                    state.isAnalyzeAvailable &&
+                    !state.isInteractionLocked &&
+                    !state.isEditBottomSheetVisible,
+                analyzeButtonLabel = if (state.isAnalyzing) "Analyzing" else "Analyze",
                 animateRecommendationChanges = state.animateRecommendationChanges,
             )
         }
@@ -228,6 +232,8 @@ private fun WorkspaceScreenPreview() {
                 canUndo = true,
                 canReset = true,
                 canAnalyze = true,
+                isAnalyzeAvailable = true,
+                isAnalyzing = false,
                 isInteractionLocked = false,
                 animateRecommendationChanges = true,
                 recommendations = listOf(

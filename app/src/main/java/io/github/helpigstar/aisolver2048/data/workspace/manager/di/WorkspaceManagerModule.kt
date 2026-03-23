@@ -4,6 +4,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceRunner
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceManager
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceManagerImpl
 import javax.inject.Singleton
@@ -14,5 +15,10 @@ object WorkspaceManagerModule {
 
     @Provides
     @Singleton
-    fun provideWorkspaceManager(): WorkspaceManager = WorkspaceManagerImpl()
+    fun provideWorkspaceManager(
+        workspaceInferenceRunner: WorkspaceInferenceRunner,
+    ): WorkspaceManager =
+        WorkspaceManagerImpl(
+            workspaceInferenceRunner = workspaceInferenceRunner,
+        )
 }

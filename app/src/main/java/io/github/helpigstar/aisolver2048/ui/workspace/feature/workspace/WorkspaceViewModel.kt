@@ -9,6 +9,7 @@ import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceMoveTil
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceMoveTileMotionState
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationDirection
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationProbability
+import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationResult
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceSnapshot
 import io.github.helpigstar.aisolver2048.ui.platform.base.BaseViewModel
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDefaults
@@ -114,6 +115,7 @@ class WorkspaceViewModel @Inject constructor(
                 isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
+                isAnalyzeAvailable = state.isAnalyzeAvailable,
             )
         }
     }
@@ -129,6 +131,7 @@ class WorkspaceViewModel @Inject constructor(
                 isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
+                isAnalyzeAvailable = state.isAnalyzeAvailable,
             )
         }
     }
@@ -147,24 +150,69 @@ class WorkspaceViewModel @Inject constructor(
                 isEditBottomSheetVisible = false,
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
+                isAnalyzeAvailable = state.isAnalyzeAvailable,
             )
         }
     }
 
     private fun handleAnalyzeClick() {
-        if (state.isInteractionLocked || state.isEditBottomSheetVisible || !state.canAnalyze) return
+        if (
+            state.isInteractionLocked ||
+            state.isEditBottomSheetVisible ||
+            !state.canAnalyze ||
+            !state.isAnalyzeAvailable
+        ) {
+            return
+        }
 
-        val generatedRecommendations = workspaceManager
-            .generateRecommendations(snapshot = state.toSnapshot())
-            .map { recommendation ->
-                recommendation.toUiModel()
-            }
-
+        val snapshot = state.toSnapshot()
         mutableStateFlow.update { currentState ->
             currentState.copy(
-                recommendations = generatedRecommendations,
-                animateRecommendationChanges = true,
+                isInteractionLocked = true,
+                isAnalyzing = true,
+                animateRecommendationChanges = false,
             )
+        }
+
+        viewModelScope.launch {
+            when (val recommendationResult = workspaceManager.generateRecommendations(snapshot = snapshot)) {
+                WorkspaceRecommendationResult.InferenceFailed -> {
+                    mutableStateFlow.update { currentState ->
+                        currentState.copy(
+                            recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                            isInteractionLocked = false,
+                            isAnalyzing = false,
+                            animateRecommendationChanges = false,
+                        )
+                    }
+                }
+
+                WorkspaceRecommendationResult.Unavailable -> {
+                    mutableStateFlow.update { currentState ->
+                        currentState.copy(
+                            recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                            isAnalyzeAvailable = false,
+                            isInteractionLocked = false,
+                            isAnalyzing = false,
+                            animateRecommendationChanges = false,
+                        )
+                    }
+                }
+
+                is WorkspaceRecommendationResult.Success -> {
+                    val generatedRecommendations = recommendationResult.recommendations.map { recommendation ->
+                        recommendation.toUiModel()
+                    }
+                    mutableStateFlow.update { currentState ->
+                        currentState.copy(
+                            recommendations = generatedRecommendations,
+                            isInteractionLocked = false,
+                            isAnalyzing = false,
+                            animateRecommendationChanges = true,
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -201,6 +249,7 @@ class WorkspaceViewModel @Inject constructor(
                 canUndo = undoHistory.isNotEmpty(),
                 recommendations = placeholderRecommendations,
                 boardTiles = stageOneBoardTiles,
+                isAnalyzeAvailable = state.isAnalyzeAvailable,
                 isInteractionLocked = true,
             )
         }
@@ -244,6 +293,8 @@ data class WorkspaceState(
     val canUndo: Boolean,
     val canReset: Boolean,
     val canAnalyze: Boolean,
+    val isAnalyzeAvailable: Boolean,
+    val isAnalyzing: Boolean,
     val isInteractionLocked: Boolean,
     val animateRecommendationChanges: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
@@ -292,6 +343,8 @@ private fun WorkspaceSnapshot.toState(
     canUndo: Boolean,
     recommendations: List<WorkspaceRecommendationUi> = defaultWorkspaceRecommendations(),
     boardTiles: List<WorkspaceBoardTileUi> = boardValues.toStaticBoardTiles(),
+    isAnalyzeAvailable: Boolean = true,
+    isAnalyzing: Boolean = false,
     isInteractionLocked: Boolean = false,
 ): WorkspaceState =
     WorkspaceState(
@@ -306,6 +359,8 @@ private fun WorkspaceSnapshot.toState(
             score = score,
         ),
         canAnalyze = canAnalyze(boardValues),
+        isAnalyzeAvailable = isAnalyzeAvailable,
+        isAnalyzing = isAnalyzing,
         isInteractionLocked = isInteractionLocked,
         animateRecommendationChanges = false,
         recommendations = recommendations,
@@ -317,6 +372,8 @@ private fun WorkspaceState.restoreAfterProcessDeath(): WorkspaceState =
             boardTiles = boardValues.toStaticBoardTiles(),
             editingCellIndex = null,
             isEditBottomSheetVisible = false,
+            isAnalyzeAvailable = true,
+            isAnalyzing = false,
             isInteractionLocked = false,
             animateRecommendationChanges = false,
             canReset = canReset(
@@ -328,6 +385,8 @@ private fun WorkspaceState.restoreAfterProcessDeath(): WorkspaceState =
     } else {
         copy(
             boardTiles = boardValues.toStaticBoardTiles(),
+            isAnalyzeAvailable = true,
+            isAnalyzing = false,
             animateRecommendationChanges = false,
             canReset = canReset(
                 boardValues = boardValues,

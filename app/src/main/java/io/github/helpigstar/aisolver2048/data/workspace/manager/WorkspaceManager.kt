@@ -19,9 +19,9 @@ interface WorkspaceManager {
         direction: WorkspaceRecommendationDirection,
     ): WorkspaceMoveResult
 
-    fun generateRecommendations(
+    suspend fun generateRecommendations(
         snapshot: WorkspaceSnapshot,
-    ): List<WorkspaceRecommendationProbability>
+    ): WorkspaceRecommendationResult
 }
 
 @Parcelize
@@ -34,6 +34,16 @@ data class WorkspaceRecommendationProbability(
     val direction: WorkspaceRecommendationDirection,
     val confidencePercent: Float,
 )
+
+sealed interface WorkspaceRecommendationResult {
+    data class Success(
+        val recommendations: List<WorkspaceRecommendationProbability>,
+    ) : WorkspaceRecommendationResult
+
+    data object InferenceFailed : WorkspaceRecommendationResult
+
+    data object Unavailable : WorkspaceRecommendationResult
+}
 
 data class WorkspaceMoveResult(
     val snapshot: WorkspaceSnapshot,

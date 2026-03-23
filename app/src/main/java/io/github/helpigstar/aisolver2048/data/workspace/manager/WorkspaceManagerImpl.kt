@@ -1,11 +1,15 @@
 package io.github.helpigstar.aisolver2048.data.workspace.manager
 
-import kotlin.random.Random
+import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceResult
+import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceRunner
+import kotlin.math.exp
 
 private const val BOARD_CELL_COUNT: Int = 16
 private const val BOARD_SIDE_LENGTH: Int = 4
 
-class WorkspaceManagerImpl : WorkspaceManager {
+class WorkspaceManagerImpl(
+    private val workspaceInferenceRunner: WorkspaceInferenceRunner,
+) : WorkspaceManager {
 
     override fun createInitialSnapshot(): WorkspaceSnapshot =
         WorkspaceSnapshot(
@@ -121,37 +125,85 @@ class WorkspaceManagerImpl : WorkspaceManager {
         }
     }
 
-    override fun generateRecommendations(
+    override suspend fun generateRecommendations(
         snapshot: WorkspaceSnapshot,
-    ): List<WorkspaceRecommendationProbability> {
+    ): WorkspaceRecommendationResult {
         validateSnapshot(snapshot)
 
-        val rawRecommendations = WorkspaceRecommendationDirection.entries.map { direction ->
-            WorkspaceRecommendationProbability(
-                direction = direction,
-                confidencePercent = Random.nextFloat(),
+        return when (
+            val inferenceResult = workspaceInferenceRunner.runInference(
+                boardValues = snapshot.boardValues,
+            )
+        ) {
+            WorkspaceInferenceResult.InferenceFailed -> WorkspaceRecommendationResult.InferenceFailed
+            WorkspaceInferenceResult.Unavailable -> WorkspaceRecommendationResult.Unavailable
+            is WorkspaceInferenceResult.Success -> WorkspaceRecommendationResult.Success(
+                recommendations = buildRecommendations(
+                    snapshot = snapshot,
+                    policyLogits = inferenceResult.policyLogits,
+                ),
             )
         }
-        val totalConfidence = rawRecommendations.sumOf { recommendation ->
-            recommendation.confidencePercent.toDouble()
-        }.toFloat()
+    }
 
-        return if (totalConfidence <= 0f) {
-            rawRecommendations.map { recommendation ->
-                recommendation.copy(confidencePercent = 25f)
+    private fun buildRecommendations(
+        snapshot: WorkspaceSnapshot,
+        policyLogits: FloatArray,
+    ): List<WorkspaceRecommendationProbability> {
+        if (policyLogits.size != WorkspaceRecommendationDirection.entries.size) {
+            return zeroRecommendations()
+        }
+
+        val legalActionMask = WorkspaceRecommendationDirection.entries.map { direction ->
+            applyMove(
+                snapshot = snapshot,
+                direction = direction,
+            ).hasChanged
+        }
+        val validIndices = legalActionMask.mapIndexedNotNull { index, isValid ->
+            index.takeIf { isValid }
+        }
+
+        if (validIndices.isEmpty()) {
+            return zeroRecommendations()
+        }
+
+        val maxValidLogit = validIndices.maxOf { index ->
+            policyLogits[index]
+        }
+        val expValuesByIndex = validIndices.associateWith { index ->
+            exp((policyLogits[index] - maxValidLogit).toDouble()).toFloat()
+        }
+        val totalExp = expValuesByIndex.values.sum()
+
+        if (totalExp <= 0f) {
+            return zeroRecommendations()
+        }
+
+        return WorkspaceRecommendationDirection.entries.map { direction ->
+            val probability = if (legalActionMask[direction.ordinal]) {
+                (expValuesByIndex.getValue(direction.ordinal) / totalExp) * 100f
+            } else {
+                0f
             }
-        } else {
-            rawRecommendations.map { recommendation ->
-                recommendation.copy(
-                    confidencePercent = (recommendation.confidencePercent / totalConfidence) * 100f,
-                )
-            }
+            WorkspaceRecommendationProbability(
+                direction = direction,
+                confidencePercent = probability,
+            )
         }.sortedWith(
             compareByDescending<WorkspaceRecommendationProbability> { recommendation ->
                 recommendation.confidencePercent
             }.thenBy { recommendation -> recommendation.direction.ordinal },
         )
     }
+
+    private fun zeroRecommendations(): List<WorkspaceRecommendationProbability> =
+        WorkspaceRecommendationDirection.entries.map { direction ->
+            WorkspaceRecommendationProbability(
+                direction = direction,
+                confidencePercent = 0f,
+            )
+        }
 
     private fun isValidBoardValue(value: Int): Boolean =
         value == 0 || (value > 0 && (value and (value - 1)) == 0)
