@@ -6,6 +6,16 @@ import androidx.core.content.edit
 abstract class BaseDiskSource(
     private val sharedPreferences: SharedPreferences
 ) {
+    protected fun putBoolean(
+        key: String,
+        value: Boolean,
+    ): Unit = sharedPreferences.edit() { putBoolean(key.withBase(), value) }
+
+    protected fun getBoolean(
+        key: String,
+        defaultValue: Boolean,
+    ): Boolean = sharedPreferences.getBoolean(key.withBase(), defaultValue)
+
     protected fun putString(
         key: String,
         value: String?,
