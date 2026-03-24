@@ -12,18 +12,21 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverA
 import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverActionButtonVariant
 
 object AisolverGameActionsDefaults {
-    val ContentSpacing = 24.dp
+    val ContentSpacing = 16.dp
 }
 
 @Composable
 fun AisolverGameActions(
     onUndoClick: () -> Unit,
     onResetClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     undoEnabled: Boolean = true,
     resetEnabled: Boolean = true,
+    settingsEnabled: Boolean = true,
     undoContentDescription: String? = null,
     resetContentDescription: String? = null,
+    settingsContentDescription: String? = null,
 ) {
     Row(
         modifier = modifier,
@@ -41,6 +44,12 @@ fun AisolverGameActions(
             enabled = resetEnabled,
             contentDescription = resetContentDescription ?: AisolverActionButtonVariant.Reset.label,
         )
+        AisolverActionButton(
+            variant = AisolverActionButtonVariant.Settings,
+            onClick = onSettingsClick,
+            enabled = settingsEnabled,
+            contentDescription = settingsContentDescription ?: AisolverActionButtonVariant.Settings.label,
+        )
     }
 }
 
@@ -51,6 +60,7 @@ private fun AisolverGameActionsPreview() {
         AisolverGameActions(
             onUndoClick = {},
             onResetClick = {},
+            onSettingsClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }

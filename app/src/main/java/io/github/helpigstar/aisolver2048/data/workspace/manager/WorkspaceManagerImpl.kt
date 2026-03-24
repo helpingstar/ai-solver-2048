@@ -3,12 +3,17 @@ package io.github.helpigstar.aisolver2048.data.workspace.manager
 import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceResult
 import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceRunner
 import kotlin.math.exp
+import kotlin.random.Random
 
 private const val BOARD_CELL_COUNT: Int = 16
 private const val BOARD_SIDE_LENGTH: Int = 4
+private const val SPAWN_TILE_VALUE_TWO = 2
+private const val SPAWN_TILE_VALUE_FOUR = 4
+private const val SPAWN_TILE_FOUR_PROBABILITY = 0.1f
 
 class WorkspaceManagerImpl(
     private val workspaceInferenceRunner: WorkspaceInferenceRunner,
+    private val random: Random = Random.Default,
 ) : WorkspaceManager {
 
     override fun createInitialSnapshot(): WorkspaceSnapshot =
@@ -123,6 +128,42 @@ class WorkspaceManagerImpl(
                 hasChanged = false,
             )
         }
+    }
+
+    override fun spawnRandomTile(
+        snapshot: WorkspaceSnapshot,
+    ): WorkspaceSpawnResult {
+        validateSnapshot(snapshot)
+
+        val emptyCellIndices = snapshot.boardValues.mapIndexedNotNull { cellIndex, value ->
+            cellIndex.takeIf { value == 0 }
+        }
+        if (emptyCellIndices.isEmpty()) {
+            return WorkspaceSpawnResult(
+                snapshot = snapshot,
+                spawnedTile = null,
+            )
+        }
+
+        val spawnCellIndex = emptyCellIndices[random.nextInt(until = emptyCellIndices.size)]
+        val spawnedValue = if (random.nextFloat() < SPAWN_TILE_FOUR_PROBABILITY) {
+            SPAWN_TILE_VALUE_FOUR
+        } else {
+            SPAWN_TILE_VALUE_TWO
+        }
+        val updatedBoardValues = snapshot.boardValues.toMutableList().apply {
+            this[spawnCellIndex] = spawnedValue
+        }
+
+        return WorkspaceSpawnResult(
+            snapshot = snapshot.copy(boardValues = updatedBoardValues),
+            spawnedTile = WorkspaceMoveTile(
+                id = finalTileId(cellIndex = spawnCellIndex),
+                value = spawnedValue,
+                cellIndex = spawnCellIndex,
+                motionState = WorkspaceMoveTileMotionState.Spawned,
+            ),
+        )
     }
 
     override suspend fun generateRecommendations(

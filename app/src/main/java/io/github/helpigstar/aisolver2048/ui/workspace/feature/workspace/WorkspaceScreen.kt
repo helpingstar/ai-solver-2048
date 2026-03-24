@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -35,7 +33,8 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommen
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCard
-import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCardDefaults
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsDialog
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsItemModel
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
 
@@ -60,6 +59,7 @@ private fun WorkspaceScreen(
 ) {
     val canEditBoardCells = !state.isInteractionLocked && !state.isEditBottomSheetVisible
     val canTriggerMove = !state.isInteractionLocked && !state.isEditBottomSheetVisible && state.canAnalyze
+    val canOpenSettings = !state.isInteractionLocked && !state.isEditBottomSheetVisible
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -79,8 +79,10 @@ private fun WorkspaceScreen(
                 score = state.score,
                 canUndo = state.canUndo && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
                 canReset = state.canReset && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
+                canOpenSettings = canOpenSettings,
                 onUndoClick = { onAction(WorkspaceAction.UndoClick) },
                 onResetClick = { onAction(WorkspaceAction.ResetClick) },
+                onSettingsClick = { onAction(WorkspaceAction.SettingsClick) },
             )
             AisolverBoard(
                 tiles = state.boardTiles.toBoardTiles(),
@@ -125,6 +127,28 @@ private fun WorkspaceScreen(
                 },
             )
         }
+
+        if (state.isSettingsDialogVisible) {
+            AisolverSettingsDialog(
+                spawnTileItem = AisolverSettingsItemModel(
+                    title = "Spawn Tile",
+                    description = "After each valid move, add a new tile to an empty cell like the real game.",
+                    checked = state.isSpawnTileEnabled,
+                ),
+                autoAnalyzeItem = AisolverSettingsItemModel(
+                    title = "Auto Analyze",
+                    description = "Automatically run analysis whenever the board state changes.",
+                    checked = state.isAutoAnalyzeEnabled,
+                ),
+                onDismissRequest = { onAction(WorkspaceAction.SettingsDialogDismiss) },
+                onSpawnTileCheckedChange = { enabled ->
+                    onAction(WorkspaceAction.SpawnTileSettingToggle(enabled = enabled))
+                },
+                onAutoAnalyzeCheckedChange = { enabled ->
+                    onAction(WorkspaceAction.AutoAnalyzeSettingToggle(enabled = enabled))
+                },
+            )
+        }
     }
 }
 
@@ -133,32 +157,30 @@ private fun WorkspaceStatusSection(
     score: Int,
     canUndo: Boolean,
     canReset: Boolean,
+    canOpenSettings: Boolean,
     onUndoClick: () -> Unit,
     onResetClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
-    Column(
+    Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .width(AisolverBoardDefaults.BoardSize)
             .background(defaultAisolverColorScheme.background.primary),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AisolverScoreCard(
-                score = score,
-                modifier = Modifier.width(AisolverScoreCardDefaults.MinWidth),
-            )
-            AisolverGameActions(
-                onUndoClick = onUndoClick,
-                onResetClick = onResetClick,
-                undoEnabled = canUndo,
-                resetEnabled = canReset,
-            )
-        }
+        AisolverScoreCard(
+            score = score,
+            modifier = Modifier.weight(1f),
+        )
+        AisolverGameActions(
+            onUndoClick = onUndoClick,
+            onResetClick = onResetClick,
+            onSettingsClick = onSettingsClick,
+            undoEnabled = canUndo,
+            resetEnabled = canReset,
+            settingsEnabled = canOpenSettings,
+        )
     }
 }
 
@@ -229,12 +251,15 @@ private fun WorkspaceScreenPreview() {
                 score = 8,
                 editingCellIndex = null,
                 isEditBottomSheetVisible = false,
+                isSettingsDialogVisible = false,
                 canUndo = true,
                 canReset = true,
                 canAnalyze = true,
                 isAnalyzeAvailable = true,
                 isAnalyzing = false,
                 isInteractionLocked = false,
+                isSpawnTileEnabled = true,
+                isAutoAnalyzeEnabled = true,
                 animateRecommendationChanges = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(

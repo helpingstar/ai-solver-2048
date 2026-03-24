@@ -34,6 +34,10 @@ enum class AisolverActionButtonVariant(
         label = "Reset",
         iconResId = AisolverDrawable.ic_autorenew,
     ),
+    Settings(
+        label = "Settings",
+        iconResId = AisolverDrawable.ic_settings,
+    ),
 }
 
 object AisolverActionButtonDefaults {

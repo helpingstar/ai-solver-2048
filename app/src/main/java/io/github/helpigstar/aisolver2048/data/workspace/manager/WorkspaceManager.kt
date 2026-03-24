@@ -19,6 +19,10 @@ interface WorkspaceManager {
         direction: WorkspaceRecommendationDirection,
     ): WorkspaceMoveResult
 
+    fun spawnRandomTile(
+        snapshot: WorkspaceSnapshot,
+    ): WorkspaceSpawnResult
+
     suspend fun generateRecommendations(
         snapshot: WorkspaceSnapshot,
     ): WorkspaceRecommendationResult
@@ -52,6 +56,11 @@ data class WorkspaceMoveResult(
     val hasChanged: Boolean,
 )
 
+data class WorkspaceSpawnResult(
+    val snapshot: WorkspaceSnapshot,
+    val spawnedTile: WorkspaceMoveTile?,
+)
+
 data class WorkspaceMoveTile(
     val id: String,
     val value: Int,
@@ -62,6 +71,7 @@ data class WorkspaceMoveTile(
 
 enum class WorkspaceMoveTileMotionState {
     Static,
+    Spawned,
     Merged,
 }
 

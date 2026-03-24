@@ -21,9 +21,9 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverA
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 
 object AisolverScoreCardDefaults {
-    val MinWidth = 206.dp
-    val Height = AisolverActionButtonDefaults.Size
-    val StartPadding = 16.dp
+    val MinWidth = 164.dp
+    val Height = 52.dp
+    val HorizontalPadding = 16.dp
     val ContentSpacing = 8.dp
     val Shape = RoundedCornerShape(14.dp)
 
@@ -46,7 +46,7 @@ fun AisolverScoreCard(
             )
             .clip(AisolverScoreCardDefaults.Shape)
             .background(AisolverScoreCardDefaults.ContainerColor)
-            .padding(start = AisolverScoreCardDefaults.StartPadding),
+            .padding(horizontal = AisolverScoreCardDefaults.HorizontalPadding),
         horizontalArrangement = Arrangement.spacedBy(AisolverScoreCardDefaults.ContentSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -64,7 +64,7 @@ fun AisolverScoreCard(
             color = AisolverScoreCardDefaults.ValueColor,
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 lineHeight = 32.sp,
             ),
         )
@@ -93,12 +93,12 @@ private fun AisolverScoreCardRowPreview() {
         ) {
             AisolverScoreCard(
                 score = 1024,
-                modifier = Modifier.width(206.dp),
+                modifier = Modifier.width(164.dp),
             )
             AisolverScoreCard(
                 score = 4096,
                 label = "Best",
-                modifier = Modifier.width(206.dp),
+                modifier = Modifier.width(164.dp),
             )
         }
     }
