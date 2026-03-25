@@ -1,5 +1,6 @@
 package io.github.helpigstar.aisolver2048.ui.platform.components
 
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,9 +53,13 @@ fun AisolverRecommendationList(
                 },
                 modifier = Modifier.animateItem(
                     fadeInSpec = null,
-                    placementSpec = tween(
-                        durationMillis = AisolverRecommendationListDefaults.PlacementAnimationDurationMillis,
-                    ),
+                    placementSpec = if (animateRecommendationChanges) {
+                        tween(
+                            durationMillis = AisolverRecommendationListDefaults.PlacementAnimationDurationMillis,
+                        )
+                    } else {
+                        snap()
+                    },
                     fadeOutSpec = null,
                 ),
                 showDivider = recommendation != recommendations.last(),

@@ -86,6 +86,7 @@ private fun WorkspaceScreen(
             )
             AisolverBoard(
                 tiles = state.boardTiles.toBoardTiles(),
+                animateTileChanges = state.isAnimationsEnabled,
                 onCellClick = if (canEditBoardCells) { position ->
                     onAction(WorkspaceAction.CellClick(position.toCellIndex()))
                 } else {
@@ -111,7 +112,7 @@ private fun WorkspaceScreen(
                     !state.isInteractionLocked &&
                     !state.isEditBottomSheetVisible,
                 analyzeButtonLabel = if (state.isAnalyzing) "Analyzing" else "Analyze",
-                animateRecommendationChanges = state.animateRecommendationChanges,
+                animateRecommendationChanges = state.animateRecommendationChanges && state.isAnimationsEnabled,
             )
         }
 
@@ -140,12 +141,20 @@ private fun WorkspaceScreen(
                     description = "Automatically run analysis whenever the board state changes.",
                     checked = state.isAutoAnalyzeEnabled,
                 ),
+                animationsItem = AisolverSettingsItemModel(
+                    title = "Animations",
+                    description = "Animate board moves and recommendation updates.",
+                    checked = state.isAnimationsEnabled,
+                ),
                 onDismissRequest = { onAction(WorkspaceAction.SettingsDialogDismiss) },
                 onSpawnTileCheckedChange = { enabled ->
                     onAction(WorkspaceAction.SpawnTileSettingToggle(enabled = enabled))
                 },
                 onAutoAnalyzeCheckedChange = { enabled ->
                     onAction(WorkspaceAction.AutoAnalyzeSettingToggle(enabled = enabled))
+                },
+                onAnimationsCheckedChange = { enabled ->
+                    onAction(WorkspaceAction.AnimationsSettingToggle(enabled = enabled))
                 },
             )
         }
@@ -260,6 +269,7 @@ private fun WorkspaceScreenPreview() {
                 isInteractionLocked = false,
                 isSpawnTileEnabled = true,
                 isAutoAnalyzeEnabled = true,
+                isAnimationsEnabled = true,
                 animateRecommendationChanges = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(

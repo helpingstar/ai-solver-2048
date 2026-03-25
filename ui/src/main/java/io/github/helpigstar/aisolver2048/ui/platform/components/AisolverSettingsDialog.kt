@@ -33,7 +33,7 @@ object AisolverSettingsDialogDefaults {
     val DialogShape = RoundedCornerShape(24.dp)
     val ItemShape = RoundedCornerShape(14.dp)
     val DialogMaxWidth = 360.dp
-    val DialogPadding = 20.dp
+    val DialogPadding = 16.dp
     val ContentPadding = 24.dp
     val ContentSpacing = 24.dp
     val ItemSpacing = 16.dp
@@ -61,9 +61,11 @@ data class AisolverSettingsItemModel(
 fun AisolverSettingsDialog(
     spawnTileItem: AisolverSettingsItemModel,
     autoAnalyzeItem: AisolverSettingsItemModel,
+    animationsItem: AisolverSettingsItemModel,
     onDismissRequest: () -> Unit,
     onSpawnTileCheckedChange: (Boolean) -> Unit,
     onAutoAnalyzeCheckedChange: (Boolean) -> Unit,
+    onAnimationsCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     BasicAlertDialog(
@@ -105,6 +107,10 @@ fun AisolverSettingsDialog(
                     AisolverSettingsItem(
                         item = autoAnalyzeItem,
                         onCheckedChange = onAutoAnalyzeCheckedChange,
+                    )
+                    AisolverSettingsItem(
+                        item = animationsItem,
+                        onCheckedChange = onAnimationsCheckedChange,
                     )
                 }
                 Button(
@@ -212,9 +218,15 @@ private fun AisolverSettingsDialogPreview() {
                 description = "Automatically run analysis whenever the board state changes.",
                 checked = true,
             ),
+            animationsItem = AisolverSettingsItemModel(
+                title = "Animations",
+                description = "Animate board moves and recommendation updates.",
+                checked = true,
+            ),
             onDismissRequest = {},
             onSpawnTileCheckedChange = {},
             onAutoAnalyzeCheckedChange = {},
+            onAnimationsCheckedChange = {},
         )
     }
 }

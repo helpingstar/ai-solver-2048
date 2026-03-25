@@ -6,6 +6,7 @@ import io.github.helpigstar.aisolver2048.data.workspace.settings.repository.mode
 
 private const val SPAWN_TILE_ENABLED_KEY = "workspaceSettings_spawnTileEnabled"
 private const val AUTO_ANALYZE_ENABLED_KEY = "workspaceSettings_autoAnalyzeEnabled"
+private const val ANIMATIONS_ENABLED_KEY = "workspaceSettings_animationsEnabled"
 private const val DEFAULT_SETTING_ENABLED = true
 
 class WorkspaceSettingsDiskSourceImpl(
@@ -23,6 +24,10 @@ class WorkspaceSettingsDiskSourceImpl(
                 key = AUTO_ANALYZE_ENABLED_KEY,
                 defaultValue = DEFAULT_SETTING_ENABLED,
             ),
+            isAnimationsEnabled = getBoolean(
+                key = ANIMATIONS_ENABLED_KEY,
+                defaultValue = DEFAULT_SETTING_ENABLED,
+            ),
         )
 
     override fun storeWorkspaceSettings(workspaceSettings: WorkspaceSettings) {
@@ -33,6 +38,10 @@ class WorkspaceSettingsDiskSourceImpl(
         putBoolean(
             key = AUTO_ANALYZE_ENABLED_KEY,
             value = workspaceSettings.isAutoAnalyzeEnabled,
+        )
+        putBoolean(
+            key = ANIMATIONS_ENABLED_KEY,
+            value = workspaceSettings.isAnimationsEnabled,
         )
     }
 }

@@ -2,6 +2,7 @@ package io.github.helpigstar.aisolver2048.ui.platform.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -99,6 +100,7 @@ fun AisolverBoard(
     modifier: Modifier = Modifier,
     boardColor: Color = defaultAisolverColorScheme.board.background,
     emptyCellColor: Color = defaultAisolverColorScheme.board.cell,
+    animateTileChanges: Boolean = true,
     selectedPosition: AisolverBoardPosition? = null,
     onCellClick: ((AisolverBoardPosition) -> Unit)? = null,
     onSwipe: ((AisolverBoardSwipeDirection) -> Unit)? = null,
@@ -115,7 +117,10 @@ fun AisolverBoard(
         Box {
             tiles.forEach { tile ->
                 key(tile.id) {
-                    AnimatedBoardTile(tile = tile)
+                    AnimatedBoardTile(
+                        tile = tile,
+                        animateTileChanges = animateTileChanges,
+                    )
                 }
             }
         }
@@ -264,6 +269,7 @@ private fun CellSelectionGrid(
 @Composable
 private fun AnimatedBoardTile(
     tile: AisolverBoardTile,
+    animateTileChanges: Boolean,
 ) {
     val density = LocalDensity.current
     val targetOffset = boardOffsetFor(position = tile.position)
@@ -293,6 +299,13 @@ private fun AnimatedBoardTile(
 
         offsetX.snapTo(startX)
         offsetY.snapTo(startY)
+
+        if (!animateTileChanges) {
+            offsetX.snapTo(endX)
+            offsetY.snapTo(endY)
+            scale.snapTo(1f)
+            return@LaunchedEffect
+        }
 
         if (startX != endX || startY != endY) {
             coroutineScope {

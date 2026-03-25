@@ -78,6 +78,7 @@ class WorkspaceViewModel @Inject constructor(
             WorkspaceAction.SettingsDialogDismiss -> dismissSettingsDialog()
             is WorkspaceAction.SpawnTileSettingToggle -> updateSpawnTileSetting(action.enabled)
             is WorkspaceAction.AutoAnalyzeSettingToggle -> updateAutoAnalyzeSetting(action.enabled)
+            is WorkspaceAction.AnimationsSettingToggle -> updateAnimationsSetting(action.enabled)
             WorkspaceAction.EditBottomSheetDismiss -> dismissEditBottomSheet()
             is WorkspaceAction.EditBottomSheetValueClick -> updateEditingCellValue(action.value)
             is WorkspaceAction.Move -> handleMove(direction = action.direction)
@@ -247,7 +248,7 @@ class WorkspaceViewModel @Inject constructor(
                             recommendations = generatedRecommendations,
                             isInteractionLocked = false,
                             isAnalyzing = false,
-                            animateRecommendationChanges = true,
+                            animateRecommendationChanges = currentState.isAnimationsEnabled,
                         )
                     }
                 }
@@ -295,6 +296,23 @@ class WorkspaceViewModel @Inject constructor(
         val settledBoardTiles = spawnAnimatedBoardTiles
             ?.toSettledBoardTiles()
             ?: settledMoveBoardTiles
+
+        if (!state.isAnimationsEnabled) {
+            mutableStateFlow.update {
+                finalSnapshot.toState(
+                    editingCellIndex = null,
+                    isEditBottomSheetVisible = false,
+                    isSettingsDialogVisible = false,
+                    canUndo = undoHistory.isNotEmpty(),
+                    recommendations = placeholderRecommendations,
+                    boardTiles = settledBoardTiles,
+                    isAnalyzeAvailable = state.isAnalyzeAvailable,
+                    workspaceSettings = state.toWorkspaceSettings(),
+                )
+            }
+            requestAutoAnalyzeIfEnabled(snapshot = finalSnapshot)
+            return
+        }
 
         mutableStateFlow.update {
             finalSnapshot.toState(
@@ -364,6 +382,19 @@ class WorkspaceViewModel @Inject constructor(
         }
     }
 
+    private fun updateAnimationsSetting(enabled: Boolean) {
+        if (enabled == state.isAnimationsEnabled) return
+
+        updateWorkspaceSettings { currentSettings ->
+            currentSettings.copy(isAnimationsEnabled = enabled)
+        }
+        mutableStateFlow.update { currentState ->
+            currentState.copy(
+                animateRecommendationChanges = currentState.animateRecommendationChanges && enabled,
+            )
+        }
+    }
+
     private fun updateWorkspaceSettings(
         transform: (WorkspaceSettings) -> WorkspaceSettings,
     ) {
@@ -373,6 +404,7 @@ class WorkspaceViewModel @Inject constructor(
             currentState.copy(
                 isSpawnTileEnabled = updatedSettings.isSpawnTileEnabled,
                 isAutoAnalyzeEnabled = updatedSettings.isAutoAnalyzeEnabled,
+                isAnimationsEnabled = updatedSettings.isAnimationsEnabled,
             )
         }
     }
@@ -440,7 +472,7 @@ class WorkspaceViewModel @Inject constructor(
                     mutableStateFlow.update { currentState ->
                         currentState.copy(
                             recommendations = generatedRecommendations,
-                            animateRecommendationChanges = true,
+                            animateRecommendationChanges = currentState.isAnimationsEnabled,
                         )
                     }
                 }
@@ -491,6 +523,7 @@ data class WorkspaceState(
     val isInteractionLocked: Boolean,
     val isSpawnTileEnabled: Boolean,
     val isAutoAnalyzeEnabled: Boolean,
+    val isAnimationsEnabled: Boolean,
     val animateRecommendationChanges: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
 ) : Parcelable
@@ -520,6 +553,8 @@ sealed class WorkspaceAction {
     data class SpawnTileSettingToggle(val enabled: Boolean) : WorkspaceAction()
 
     data class AutoAnalyzeSettingToggle(val enabled: Boolean) : WorkspaceAction()
+
+    data class AnimationsSettingToggle(val enabled: Boolean) : WorkspaceAction()
 
     data object EditBottomSheetDismiss : WorkspaceAction()
 
@@ -570,6 +605,7 @@ private fun WorkspaceSnapshot.toState(
         isInteractionLocked = isInteractionLocked,
         isSpawnTileEnabled = workspaceSettings.isSpawnTileEnabled,
         isAutoAnalyzeEnabled = workspaceSettings.isAutoAnalyzeEnabled,
+        isAnimationsEnabled = workspaceSettings.isAnimationsEnabled,
         animateRecommendationChanges = false,
         recommendations = recommendations,
     )
@@ -711,4 +747,5 @@ private fun WorkspaceState.toWorkspaceSettings(): WorkspaceSettings =
     WorkspaceSettings(
         isSpawnTileEnabled = isSpawnTileEnabled,
         isAutoAnalyzeEnabled = isAutoAnalyzeEnabled,
+        isAnimationsEnabled = isAnimationsEnabled,
     )
