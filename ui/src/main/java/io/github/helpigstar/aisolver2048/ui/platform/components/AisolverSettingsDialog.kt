@@ -1,22 +1,21 @@
 package io.github.helpigstar.aisolver2048.ui.platform.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,24 +29,22 @@ import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolver
 private val MaterialSwitchTrackColor = Color(0xFF6750A4)
 
 object AisolverSettingsDialogDefaults {
-    val DialogShape = RoundedCornerShape(24.dp)
-    val ItemShape = RoundedCornerShape(14.dp)
-    val DialogMaxWidth = 360.dp
+    val DialogShape = RoundedCornerShape(28.dp)
+    val DialogMaxWidth = 342.dp
     val DialogPadding = 16.dp
-    val ContentPadding = 24.dp
-    val ContentSpacing = 24.dp
-    val ItemSpacing = 16.dp
-    val ItemContentPadding = 16.dp
-    val ItemTextSpacing = 4.dp
-    val CloseButtonShape = RoundedCornerShape(14.dp)
+    val HeaderBottomPadding = 0.dp
+    val ItemVerticalPadding = 8.dp
+    val ItemBottomPaddingWithDivider = 17.dp
+    val ItemContentSpacing = 16.dp
+    val ItemDividerThickness = 1.dp
+    val CloseButtonShape = RoundedCornerShape(999.dp)
+    val CloseButtonContentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
 
     val DialogBackground = defaultAisolverColorScheme.background.primary
-    val ItemBackground = defaultAisolverColorScheme.background.tertiary
-    val ItemBorder = defaultAisolverColorScheme.stroke.border
+    val ItemDividerColor = defaultAisolverColorScheme.stroke.border.copy(alpha = 0.35f)
     val TitleColor = defaultAisolverColorScheme.text.primary
     val DescriptionColor = defaultAisolverColorScheme.text.tertiary
-    val CloseButtonBackground = defaultAisolverColorScheme.button.primaryBackground
-    val CloseButtonForeground = defaultAisolverColorScheme.button.primaryForeground
+    val CloseButtonForeground = defaultAisolverColorScheme.button.primaryBackground
 }
 
 data class AisolverSettingsItemModel(
@@ -57,7 +54,6 @@ data class AisolverSettingsItemModel(
 )
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun AisolverSettingsDialog(
     spawnTileItem: AisolverSettingsItemModel,
     autoAnalyzeItem: AisolverSettingsItemModel,
@@ -68,111 +64,102 @@ fun AisolverSettingsDialog(
     onAnimationsCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    BasicAlertDialog(
+    AlertDialog(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AisolverSettingsDialogDefaults.DialogPadding)
-                .widthIn(max = AisolverSettingsDialogDefaults.DialogMaxWidth),
-            shape = AisolverSettingsDialogDefaults.DialogShape,
-            color = AisolverSettingsDialogDefaults.DialogBackground,
-            tonalElevation = 0.dp,
-            shadowElevation = 20.dp,
-        ) {
-            Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(AisolverSettingsDialogDefaults.DialogPadding)
+            .widthIn(max = AisolverSettingsDialogDefaults.DialogMaxWidth),
+        shape = AisolverSettingsDialogDefaults.DialogShape,
+        containerColor = AisolverSettingsDialogDefaults.DialogBackground,
+        title = {
+            Text(
+                text = "Settings",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(AisolverSettingsDialogDefaults.ContentPadding),
-                verticalArrangement = Arrangement.spacedBy(AisolverSettingsDialogDefaults.ContentSpacing),
+                    .padding(bottom = AisolverSettingsDialogDefaults.HeaderBottomPadding),
+                color = AisolverSettingsDialogDefaults.TitleColor,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    lineHeight = 32.sp,
+                ),
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                AisolverSettingsItem(
+                    item = spawnTileItem,
+                    showDivider = true,
+                    onCheckedChange = onSpawnTileCheckedChange,
+                )
+                AisolverSettingsItem(
+                    item = autoAnalyzeItem,
+                    showDivider = true,
+                    onCheckedChange = onAutoAnalyzeCheckedChange,
+                )
+                AisolverSettingsItem(
+                    item = animationsItem,
+                    showDivider = false,
+                    onCheckedChange = onAnimationsCheckedChange,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                shape = AisolverSettingsDialogDefaults.CloseButtonShape,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = AisolverSettingsDialogDefaults.CloseButtonForeground,
+                ),
+                contentPadding = AisolverSettingsDialogDefaults.CloseButtonContentPadding,
             ) {
                 Text(
-                    text = "Settings",
-                    color = AisolverSettingsDialogDefaults.TitleColor,
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    text = "OK",
+                    style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        lineHeight = 28.sp,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
                     ),
                 )
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(AisolverSettingsDialogDefaults.ItemSpacing),
-                ) {
-                    AisolverSettingsItem(
-                        item = spawnTileItem,
-                        onCheckedChange = onSpawnTileCheckedChange,
-                    )
-                    AisolverSettingsItem(
-                        item = autoAnalyzeItem,
-                        onCheckedChange = onAutoAnalyzeCheckedChange,
-                    )
-                    AisolverSettingsItem(
-                        item = animationsItem,
-                        onCheckedChange = onAnimationsCheckedChange,
-                    )
-                }
-                Button(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AisolverSettingsDialogDefaults.CloseButtonShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AisolverSettingsDialogDefaults.CloseButtonBackground,
-                        contentColor = AisolverSettingsDialogDefaults.CloseButtonForeground,
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp,
-                        focusedElevation = 0.dp,
-                        hoveredElevation = 0.dp,
-                        disabledElevation = 0.dp,
-                    ),
-                ) {
-                    Text(
-                        text = "Close",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            lineHeight = 24.sp,
-                        ),
-                    )
-                }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
 private fun AisolverSettingsItem(
     item: AisolverSettingsItemModel,
+    showDivider: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        shape = AisolverSettingsDialogDefaults.ItemShape,
-        color = AisolverSettingsDialogDefaults.ItemBackground,
-        border = BorderStroke(
-            width = 1.dp,
-            color = AisolverSettingsDialogDefaults.ItemBorder,
-        ),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(AisolverSettingsDialogDefaults.ItemContentPadding),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(
+                    top = AisolverSettingsDialogDefaults.ItemVerticalPadding,
+                    bottom = if (showDivider) {
+                        AisolverSettingsDialogDefaults.ItemBottomPaddingWithDivider
+                    } else {
+                        AisolverSettingsDialogDefaults.ItemVerticalPadding
+                    },
+                ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(AisolverSettingsDialogDefaults.ItemTextSpacing),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AisolverSettingsDialogDefaults.ItemContentSpacing),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = item.title,
+                    modifier = Modifier.weight(1f),
                     color = AisolverSettingsDialogDefaults.TitleColor,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
@@ -180,24 +167,32 @@ private fun AisolverSettingsItem(
                         lineHeight = 24.sp,
                     ),
                 )
-                Text(
-                    text = item.description,
-                    color = AisolverSettingsDialogDefaults.DescriptionColor,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
+                Switch(
+                    checked = item.checked,
+                    onCheckedChange = onCheckedChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = MaterialSwitchTrackColor,
+                        checkedBorderColor = MaterialSwitchTrackColor,
                     ),
                 )
             }
-            Switch(
-                checked = item.checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = MaterialSwitchTrackColor,
-                    checkedBorderColor = MaterialSwitchTrackColor,
+
+            Text(
+                text = item.description,
+                color = AisolverSettingsDialogDefaults.DescriptionColor,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
                 ),
+            )
+        }
+
+        if (showDivider) {
+            HorizontalDivider(
+                thickness = AisolverSettingsDialogDefaults.ItemDividerThickness,
+                color = AisolverSettingsDialogDefaults.ItemDividerColor,
             )
         }
     }
