@@ -50,6 +50,9 @@ object AisolverAutoAnalyzeButtonDefaults {
     val ContentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
     val IconSize = 24.dp
     val ContentSpacing = 4.dp
+
+    val DisabledContainerColor: Color = defaultAisolverColorScheme.button.primaryBackgroundDisabled
+    val DisabledContentColor: Color = defaultAisolverColorScheme.button.primaryForegroundDisabled
 }
 
 @Composable
@@ -57,14 +60,18 @@ fun AisolverAutoAnalyzeButton(
     variant: AisolverAutoAnalyzeButtonVariant,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier,
         shape = AisolverAutoAnalyzeButtonDefaults.Shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = variant.containerColor,
             contentColor = variant.contentColor,
+            disabledContainerColor = AisolverAutoAnalyzeButtonDefaults.DisabledContainerColor,
+            disabledContentColor = AisolverAutoAnalyzeButtonDefaults.DisabledContentColor,
         ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 0.dp,
@@ -112,6 +119,7 @@ private fun AisolverAutoAnalyzeButtonPreview() {
             AisolverAutoAnalyzeButton(
                 variant = AisolverAutoAnalyzeButtonVariant.Stop,
                 onClick = {},
+                enabled = false,
             )
         }
     }

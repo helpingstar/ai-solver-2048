@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAutoAnalyzeButtonVariant
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 
 object AisolverRecommendationCardDefaults {
@@ -25,9 +26,12 @@ object AisolverRecommendationCardDefaults {
 fun AisolverRecommendationCard(
     recommendations: List<AisolverRecommendation>,
     onAnalyzeClick: () -> Unit,
+    onAutoMoveClick: () -> Unit = {},
     onRecommendationClick: ((AisolverRecommendationDirection) -> Unit)? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    autoButtonEnabled: Boolean = true,
+    autoButtonVariant: AisolverAutoAnalyzeButtonVariant = AisolverAutoAnalyzeButtonVariant.Auto,
     animateRecommendationChanges: Boolean = true,
     title: String = "Best move",
     analyzeButtonLabel: String = "Analyze",
@@ -49,7 +53,10 @@ fun AisolverRecommendationCard(
         ) {
             AisolverRecommendationHeader(
                 onAnalyzeClick = onAnalyzeClick,
+                onAutoMoveClick = onAutoMoveClick,
                 enabled = enabled,
+                autoButtonEnabled = autoButtonEnabled,
+                autoButtonVariant = autoButtonVariant,
                 title = title,
                 analyzeButtonLabel = analyzeButtonLabel,
                 analyzeButtonContentDescription = analyzeButtonContentDescription,
@@ -87,6 +94,7 @@ private fun AisolverRecommendationCardPreview() {
                 ),
             ),
             onAnalyzeClick = {},
+            onAutoMoveClick = {},
             modifier = Modifier.width(355.dp),
         )
     }
