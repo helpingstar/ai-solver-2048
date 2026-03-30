@@ -1,7 +1,5 @@
 package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
 
-import android.os.Parcelable
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceManager
@@ -21,15 +19,11 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommen
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationListDefaults
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
-private const val KEY_STATE: String = "state"
-private const val KEY_HISTORY: String = "history"
+private const val MAX_UNDO_HISTORY = 50
 private const val EMPTY_CELL_VALUE: Int = 0
 private val MOVE_ANIMATION_DURATION_MILLIS: Long =
     AisolverBoardDefaults.MoveDurationMillis.toLong()
@@ -45,39 +39,24 @@ private val RECOMMENDATION_ANIMATION_DURATION_MILLIS: Long =
 
 @HiltViewModel
 class WorkspaceViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
     private val workspaceManager: WorkspaceManager,
     private val workspaceSettingsRepository: WorkspaceSettingsRepository,
 ) : BaseViewModel<WorkspaceState, Unit, WorkspaceAction>(
-    initialState = savedStateHandle
-        .get<WorkspaceState>(KEY_STATE)
-        ?.restoreAfterProcessDeath()
-        ?: workspaceManager
-            .createInitialSnapshot()
-            .toState(
-                editingCellIndex = null,
-                isEditBottomSheetVisible = false,
-                isSettingsDialogVisible = false,
-                canUndo = false,
-                workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
-            ),
+    initialState = workspaceManager
+        .createInitialSnapshot()
+        .toState(
+            editingCellIndex = null,
+            isEditBottomSheetVisible = false,
+            isSettingsDialogVisible = false,
+            canUndo = false,
+            workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
+        ),
 ) {
-    private val undoHistory: ArrayList<WorkspaceSnapshot> =
-        savedStateHandle.get<ArrayList<WorkspaceSnapshot>>(KEY_HISTORY) ?: arrayListOf()
+    private val undoHistory = ArrayDeque<WorkspaceSnapshot>(MAX_UNDO_HISTORY)
     private var autoAnalyzeJob: Job? = null
     private var autoMoveExecutionJob: Job? = null
     private var activeAutoAnalyzeRequestId: Long? = null
     private var nextAutoAnalyzeRequestId: Long = 0L
-
-    init {
-        mutableStateFlow.update { currentState ->
-            currentState.withAvailability(canUndo = undoHistory.isNotEmpty())
-        }
-
-        stateFlow
-            .onEach { savedStateHandle[KEY_STATE] = it.withoutTransientState() }
-            .launchIn(viewModelScope)
-    }
 
     override fun handleAction(action: WorkspaceAction) {
         if (state.isAutoMoveEnabled && action != WorkspaceAction.AutoMoveButtonClick) return
@@ -168,8 +147,7 @@ class WorkspaceViewModel @Inject constructor(
     private fun handleUndoClick() {
         if (state.isInteractionLocked || state.isEditBottomSheetVisible || undoHistory.isEmpty()) return
 
-        val restoredSnapshot = undoHistory.removeAt(undoHistory.lastIndex)
-        persistUndoHistory()
+        val restoredSnapshot = undoHistory.removeLast()
         mutableStateFlow.update {
             restoredSnapshot.toState(
                 editingCellIndex = null,
@@ -229,7 +207,8 @@ class WorkspaceViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            when (val recommendationResult = workspaceManager.generateRecommendations(snapshot = snapshot)) {
+            when (val recommendationResult =
+                workspaceManager.generateRecommendations(snapshot = snapshot)) {
                 WorkspaceRecommendationResult.InferenceFailed -> {
                     mutableStateFlow.update { currentState ->
                         currentState.copy(
@@ -256,9 +235,10 @@ class WorkspaceViewModel @Inject constructor(
                 }
 
                 is WorkspaceRecommendationResult.Success -> {
-                    val generatedRecommendations = recommendationResult.recommendations.map { recommendation ->
-                        recommendation.toUiModel()
-                    }
+                    val generatedRecommendations =
+                        recommendationResult.recommendations.map { recommendation ->
+                            recommendation.toUiModel()
+                        }
                     mutableStateFlow.update { currentState ->
                         currentState.copy(
                             recommendations = generatedRecommendations,
@@ -478,7 +458,8 @@ class WorkspaceViewModel @Inject constructor(
         val requestId = ++nextAutoAnalyzeRequestId
         activeAutoAnalyzeRequestId = requestId
         autoAnalyzeJob = viewModelScope.launch {
-            when (val recommendationResult = workspaceManager.generateRecommendations(snapshot = snapshot)) {
+            when (val recommendationResult =
+                workspaceManager.generateRecommendations(snapshot = snapshot)) {
                 WorkspaceRecommendationResult.InferenceFailed -> {
                     if (!isCurrentAutoAnalyzeRequest(requestId = requestId)) return@launch
                     clearAutoAnalyzeRequest(requestId = requestId)
@@ -509,9 +490,10 @@ class WorkspaceViewModel @Inject constructor(
                 is WorkspaceRecommendationResult.Success -> {
                     if (!isCurrentAutoAnalyzeRequest(requestId = requestId)) return@launch
                     clearAutoAnalyzeRequest(requestId = requestId)
-                    val generatedRecommendations = recommendationResult.recommendations.map { recommendation ->
-                        recommendation.toUiModel()
-                    }
+                    val generatedRecommendations =
+                        recommendationResult.recommendations.map { recommendation ->
+                            recommendation.toUiModel()
+                        }
                     mutableStateFlow.update { currentState ->
                         currentState.copy(
                             recommendations = generatedRecommendations,
@@ -620,16 +602,14 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun pushUndoSnapshot(snapshot: WorkspaceSnapshot) {
-        undoHistory.add(snapshot)
-        persistUndoHistory()
-    }
-
-    private fun persistUndoHistory() {
-        savedStateHandle[KEY_HISTORY] = ArrayList(undoHistory)
+        if (undoHistory.size == MAX_UNDO_HISTORY) {
+            undoHistory.removeFirst()
+        }
+        undoHistory.addLast(snapshot)
     }
 }
 
-@Parcelize
+
 data class WorkspaceState(
     val boardValues: List<Int>,
     val boardTiles: List<WorkspaceBoardTileUi>,
@@ -650,22 +630,21 @@ data class WorkspaceState(
     val animateRecommendationChanges: Boolean,
     val hasFreshRecommendations: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
-) : Parcelable
+)
 
-@Parcelize
+
 data class WorkspaceBoardTileUi(
     val id: String,
     val value: Int,
     val cellIndex: Int,
     val previousCellIndex: Int? = null,
     val motionState: AisolverBoardTileMotionState = AisolverBoardTileMotionState.Static,
-) : Parcelable
+)
 
-@Parcelize
 data class WorkspaceRecommendationUi(
     val direction: AisolverRecommendationDirection,
     val confidencePercent: Float,
-) : Parcelable
+)
 
 sealed class WorkspaceAction {
     data class CellClick(val cellIndex: Int) : WorkspaceAction()
@@ -738,52 +717,6 @@ private fun WorkspaceSnapshot.toState(
         animateRecommendationChanges = false,
         hasFreshRecommendations = hasFreshRecommendations,
         recommendations = recommendations,
-    )
-
-private fun WorkspaceState.restoreAfterProcessDeath(): WorkspaceState =
-    if (isInteractionLocked) {
-        copy(
-            boardTiles = boardValues.toStaticBoardTiles(),
-            editingCellIndex = null,
-            isEditBottomSheetVisible = false,
-            isSettingsDialogVisible = false,
-            isAnalyzeAvailable = true,
-            isAnalyzing = false,
-            isInteractionLocked = false,
-            isAutoMoveEnabled = false,
-            animateRecommendationChanges = false,
-            canReset = canReset(
-                boardValues = boardValues,
-                score = score,
-            ),
-            canAnalyze = canAnalyze(boardValues),
-        )
-    } else {
-        copy(
-            boardTiles = boardValues.toStaticBoardTiles(),
-            isSettingsDialogVisible = false,
-            isAnalyzeAvailable = true,
-            isAnalyzing = false,
-            isAutoMoveEnabled = false,
-            animateRecommendationChanges = false,
-            canReset = canReset(
-                boardValues = boardValues,
-                score = score,
-            ),
-            canAnalyze = canAnalyze(boardValues),
-        )
-    }
-
-private fun WorkspaceState.withAvailability(
-    canUndo: Boolean,
-): WorkspaceState =
-    copy(
-        canUndo = canUndo,
-        canReset = canReset(
-            boardValues = boardValues,
-            score = score,
-        ),
-        canAnalyze = canAnalyze(boardValues),
     )
 
 private fun canReset(
@@ -891,13 +824,10 @@ private fun AisolverRecommendationDirection.toDomainDirection(): WorkspaceRecomm
 private fun canEnableAutoMove(
     state: WorkspaceState,
 ): Boolean = state.isAutoAnalyzeEnabled &&
-    state.canAnalyze &&
-    state.isAnalyzeAvailable &&
-    !state.isInteractionLocked &&
-    !state.isEditBottomSheetVisible
-
-private fun WorkspaceState.withoutTransientState(): WorkspaceState =
-    copy(isAutoMoveEnabled = false)
+        state.canAnalyze &&
+        state.isAnalyzeAvailable &&
+        !state.isInteractionLocked &&
+        !state.isEditBottomSheetVisible
 
 private fun WorkspaceState.toWorkspaceSettings(): WorkspaceSettings =
     WorkspaceSettings(
