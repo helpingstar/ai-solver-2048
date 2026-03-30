@@ -34,7 +34,7 @@ fun AisolverRecommendationHeader(
     onAnalyzeClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    title: String = "AI Recommendation",
+    title: String = "Best move",
     analyzeButtonLabel: String = "Analyze",
     analyzeButtonContentDescription: String? = null,
 ) {
@@ -54,15 +54,14 @@ fun AisolverRecommendationHeader(
             Text(
                 text = title,
                 color = AisolverRecommendationHeaderDefaults.TitleColor,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    lineHeight = 32.sp,
                 ),
             )
             AisolverAnalyzeButton(
                 onClick = onAnalyzeClick,
-                modifier = Modifier.weight(1f),
                 enabled = enabled,
                 label = analyzeButtonLabel,
                 contentDescription = analyzeButtonContentDescription,

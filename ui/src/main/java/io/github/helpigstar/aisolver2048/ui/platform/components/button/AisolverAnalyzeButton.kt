@@ -53,16 +53,6 @@ fun AisolverAnalyzeButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier
-            .defaultMinSize(
-                minWidth = AisolverAnalyzeButtonDefaults.MinWidth,
-                minHeight = AisolverAnalyzeButtonDefaults.MinHeight,
-            )
-            .semantics {
-                if (contentDescription != null) {
-                    this.contentDescription = contentDescription
-                }
-            },
         shape = AisolverAnalyzeButtonDefaults.Shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = AisolverAnalyzeButtonDefaults.ContainerColor,
@@ -81,9 +71,9 @@ fun AisolverAnalyzeButton(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
                 .background(Color.Transparent)
-                .padding(10.dp),
+                .padding(vertical = 10.dp)
+                .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center,
         ) {
             Row(

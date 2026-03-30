@@ -29,7 +29,7 @@ fun AisolverRecommendationCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     animateRecommendationChanges: Boolean = true,
-    title: String = "AI Recommendation",
+    title: String = "Best move",
     analyzeButtonLabel: String = "Analyze",
     analyzeButtonContentDescription: String? = null,
 ) {
