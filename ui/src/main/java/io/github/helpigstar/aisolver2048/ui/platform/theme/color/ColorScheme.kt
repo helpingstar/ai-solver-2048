@@ -62,6 +62,10 @@ val defaultAisolverColorScheme: AisolverColorScheme = AisolverColorScheme(
         primaryForeground = PrimitiveColors.white,
         primaryBackgroundDisabled = PrimitiveColors.gray200,
         primaryForegroundDisabled = PrimitiveColors.gray500,
+        autoAnalyzeBackground = PrimitiveColors.green500,
+        autoAnalyzeForeground = PrimitiveColors.white,
+        stopBackground = PrimitiveColors.red500,
+        stopForeground = PrimitiveColors.white,
         utilityBackground = PrimitiveColors.gray100,
         utilityForeground = PrimitiveColors.gray900,
         utilityBackgroundDisabled = PrimitiveColors.gray50,
@@ -109,6 +113,10 @@ fun dynamicAisolverColorScheme(
             primaryForeground = materialColorScheme.onPrimary,
             primaryBackgroundDisabled = materialColorScheme.onSurface.copy(alpha = 0.12f),
             primaryForegroundDisabled = materialColorScheme.onSurface.copy(alpha = 0.38f),
+            autoAnalyzeBackground = defaultAisolverColorScheme.button.autoAnalyzeBackground,
+            autoAnalyzeForeground = defaultAisolverColorScheme.button.autoAnalyzeForeground,
+            stopBackground = defaultAisolverColorScheme.button.stopBackground,
+            stopForeground = defaultAisolverColorScheme.button.stopForeground,
             utilityBackground = materialColorScheme.surfaceContainerHighest,
             utilityForeground = materialColorScheme.onSurface,
             utilityBackgroundDisabled = materialColorScheme.surfaceContainer,
@@ -170,6 +178,8 @@ private data object PrimitiveColors {
     val gray900: Color = Color(color = 0xFF101828)
 
     val blue500: Color = Color(color = 0xFF155DFC)
+    val green500: Color = Color(color = 0xFF22C55E)
+    val red500: Color = Color(color = 0xFFEF4444)
 
     val boardText: Color = Color(color = 0xFF776E65)
     val boardTextInverse: Color = Color(color = 0xFFF9F6F2)
