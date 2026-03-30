@@ -35,6 +35,7 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommen
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsDialog
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsItemModel
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAutoAnalyzeButtonVariant
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
 
@@ -57,9 +58,23 @@ private fun WorkspaceScreen(
     state: WorkspaceState,
     onAction: (WorkspaceAction) -> Unit,
 ) {
-    val canEditBoardCells = !state.isInteractionLocked && !state.isEditBottomSheetVisible
-    val canTriggerMove = !state.isInteractionLocked && !state.isEditBottomSheetVisible && state.canAnalyze
-    val canOpenSettings = !state.isInteractionLocked && !state.isEditBottomSheetVisible
+    val isAutoMoveEnabled = state.isAutoMoveEnabled
+    val canEditBoardCells =
+        !isAutoMoveEnabled && !state.isInteractionLocked && !state.isEditBottomSheetVisible
+    val canTriggerManualMove =
+        !isAutoMoveEnabled && !state.isInteractionLocked && !state.isEditBottomSheetVisible && state.canAnalyze
+    val canOpenSettings =
+        !isAutoMoveEnabled && !state.isInteractionLocked && !state.isEditBottomSheetVisible
+    val canUseAnalyzeButton = state.canAnalyze &&
+        state.isAnalyzeAvailable &&
+        !state.isInteractionLocked &&
+        !state.isEditBottomSheetVisible &&
+        !isAutoMoveEnabled
+    val canUseAutoButton = if (isAutoMoveEnabled) {
+        true
+    } else {
+        canUseAnalyzeButton && state.isAutoAnalyzeEnabled
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -77,8 +92,14 @@ private fun WorkspaceScreen(
         ) {
             WorkspaceStatusSection(
                 score = state.score,
-                canUndo = state.canUndo && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
-                canReset = state.canReset && !state.isInteractionLocked && !state.isEditBottomSheetVisible,
+                canUndo = !isAutoMoveEnabled &&
+                    state.canUndo &&
+                    !state.isInteractionLocked &&
+                    !state.isEditBottomSheetVisible,
+                canReset = !isAutoMoveEnabled &&
+                    state.canReset &&
+                    !state.isInteractionLocked &&
+                    !state.isEditBottomSheetVisible,
                 canOpenSettings = canOpenSettings,
                 onUndoClick = { onAction(WorkspaceAction.UndoClick) },
                 onResetClick = { onAction(WorkspaceAction.ResetClick) },
@@ -92,7 +113,7 @@ private fun WorkspaceScreen(
                 } else {
                     null
                 },
-                onSwipe = if (canTriggerMove) { direction ->
+                onSwipe = if (canTriggerManualMove) { direction ->
                     onAction(WorkspaceAction.Move(direction.toWorkspaceDirection()))
                 } else {
                     null
@@ -101,16 +122,20 @@ private fun WorkspaceScreen(
             AisolverRecommendationCard(
                 recommendations = state.recommendations.toRecommendationModels(),
                 onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
-                onRecommendationClick = if (canTriggerMove) { direction ->
+                onAutoMoveClick = { onAction(WorkspaceAction.AutoMoveButtonClick) },
+                onRecommendationClick = if (canTriggerManualMove) { direction ->
                     onAction(WorkspaceAction.Move(direction.toWorkspaceDirection()))
                 } else {
                     null
                 },
                 modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                enabled = state.canAnalyze &&
-                    state.isAnalyzeAvailable &&
-                    !state.isInteractionLocked &&
-                    !state.isEditBottomSheetVisible,
+                enabled = canUseAnalyzeButton,
+                autoButtonEnabled = canUseAutoButton,
+                autoButtonVariant = if (isAutoMoveEnabled) {
+                    AisolverAutoAnalyzeButtonVariant.Stop
+                } else {
+                    AisolverAutoAnalyzeButtonVariant.Auto
+                },
                 analyzeButtonLabel = if (state.isAnalyzing) "Analyzing" else "Analyze",
                 animateRecommendationChanges = state.animateRecommendationChanges && state.isAnimationsEnabled,
             )
@@ -270,7 +295,9 @@ private fun WorkspaceScreenPreview() {
                 isSpawnTileEnabled = true,
                 isAutoAnalyzeEnabled = true,
                 isAnimationsEnabled = true,
+                isAutoMoveEnabled = false,
                 animateRecommendationChanges = true,
+                hasFreshRecommendations = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(
                         direction = AisolverRecommendationDirection.Left,

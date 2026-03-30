@@ -17,6 +17,8 @@ import io.github.helpigstar.aisolver2048.ui.platform.base.BaseViewModel
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardTileMotionState
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationItemDefaults
+import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationListDefaults
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
@@ -35,6 +37,11 @@ private val MERGE_ANIMATION_DURATION_MILLIS: Long =
     (AisolverBoardDefaults.MergePopDurationMillis * 2).toLong()
 private val SPAWN_ANIMATION_DURATION_MILLIS: Long =
     AisolverBoardDefaults.SpawnDurationMillis.toLong()
+private val RECOMMENDATION_ANIMATION_DURATION_MILLIS: Long =
+    maxOf(
+        AisolverRecommendationItemDefaults.ValueAnimationDurationMillis,
+        AisolverRecommendationListDefaults.PlacementAnimationDurationMillis,
+    ).toLong()
 
 @HiltViewModel
 class WorkspaceViewModel @Inject constructor(
@@ -58,6 +65,7 @@ class WorkspaceViewModel @Inject constructor(
     private val undoHistory: ArrayList<WorkspaceSnapshot> =
         savedStateHandle.get<ArrayList<WorkspaceSnapshot>>(KEY_HISTORY) ?: arrayListOf()
     private var autoAnalyzeJob: Job? = null
+    private var autoMoveExecutionJob: Job? = null
     private var activeAutoAnalyzeRequestId: Long? = null
     private var nextAutoAnalyzeRequestId: Long = 0L
 
@@ -67,11 +75,13 @@ class WorkspaceViewModel @Inject constructor(
         }
 
         stateFlow
-            .onEach { savedStateHandle[KEY_STATE] = it }
+            .onEach { savedStateHandle[KEY_STATE] = it.withoutTransientState() }
             .launchIn(viewModelScope)
     }
 
     override fun handleAction(action: WorkspaceAction) {
+        if (state.isAutoMoveEnabled && action != WorkspaceAction.AutoMoveButtonClick) return
+
         when (action) {
             is WorkspaceAction.CellClick -> handleCellClick(action.cellIndex)
             WorkspaceAction.SettingsClick -> handleSettingsClick()
@@ -84,6 +94,7 @@ class WorkspaceViewModel @Inject constructor(
             is WorkspaceAction.Move -> handleMove(direction = action.direction)
             WorkspaceAction.ResetClick -> handleResetClick()
             WorkspaceAction.AnalyzeClick -> handleAnalyzeClick()
+            WorkspaceAction.AutoMoveButtonClick -> handleAutoMoveButtonClick()
             WorkspaceAction.UndoClick -> handleUndoClick()
         }
     }
@@ -148,6 +159,7 @@ class WorkspaceViewModel @Inject constructor(
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
                 isAnalyzeAvailable = state.isAnalyzeAvailable,
                 workspaceSettings = state.toWorkspaceSettings(),
+                isAutoMoveEnabled = state.isAutoMoveEnabled,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = updatedSnapshot)
@@ -167,6 +179,7 @@ class WorkspaceViewModel @Inject constructor(
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
                 isAnalyzeAvailable = state.isAnalyzeAvailable,
                 workspaceSettings = state.toWorkspaceSettings(),
+                isAutoMoveEnabled = state.isAutoMoveEnabled,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = restoredSnapshot)
@@ -189,6 +202,7 @@ class WorkspaceViewModel @Inject constructor(
                 recommendations = state.recommendations.toPlaceholderRecommendations(),
                 isAnalyzeAvailable = state.isAnalyzeAvailable,
                 workspaceSettings = state.toWorkspaceSettings(),
+                isAutoMoveEnabled = state.isAutoMoveEnabled,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = resetSnapshot)
@@ -223,6 +237,7 @@ class WorkspaceViewModel @Inject constructor(
                             isInteractionLocked = false,
                             isAnalyzing = false,
                             animateRecommendationChanges = false,
+                            hasFreshRecommendations = false,
                         )
                     }
                 }
@@ -235,6 +250,7 @@ class WorkspaceViewModel @Inject constructor(
                             isInteractionLocked = false,
                             isAnalyzing = false,
                             animateRecommendationChanges = false,
+                            hasFreshRecommendations = false,
                         )
                     }
                 }
@@ -249,11 +265,29 @@ class WorkspaceViewModel @Inject constructor(
                             isInteractionLocked = false,
                             isAnalyzing = false,
                             animateRecommendationChanges = currentState.isAnimationsEnabled,
+                            hasFreshRecommendations = true,
                         )
                     }
+                    scheduleAutoMoveFromRecommendations(
+                        waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
+                    )
                 }
             }
         }
+    }
+
+    private fun handleAutoMoveButtonClick() {
+        if (state.isAutoMoveEnabled) {
+            stopAutoMove()
+            return
+        }
+
+        if (!canEnableAutoMove(state = state)) return
+
+        mutableStateFlow.update { currentState ->
+            currentState.copy(isAutoMoveEnabled = true)
+        }
+        startAutoMoveFromCurrentState()
     }
 
     private fun handleMove(
@@ -308,6 +342,8 @@ class WorkspaceViewModel @Inject constructor(
                     boardTiles = settledBoardTiles,
                     isAnalyzeAvailable = state.isAnalyzeAvailable,
                     workspaceSettings = state.toWorkspaceSettings(),
+                    isAutoMoveEnabled = state.isAutoMoveEnabled,
+                    hasFreshRecommendations = false,
                 )
             }
             requestAutoAnalyzeIfEnabled(snapshot = finalSnapshot)
@@ -325,6 +361,8 @@ class WorkspaceViewModel @Inject constructor(
                 isAnalyzeAvailable = state.isAnalyzeAvailable,
                 isInteractionLocked = true,
                 workspaceSettings = state.toWorkspaceSettings(),
+                isAutoMoveEnabled = state.isAutoMoveEnabled,
+                hasFreshRecommendations = false,
             )
         }
 
@@ -373,7 +411,7 @@ class WorkspaceViewModel @Inject constructor(
         }
 
         if (!enabled) {
-            cancelAutoAnalyze()
+            stopAutoMove()
             return
         }
 
@@ -416,6 +454,7 @@ class WorkspaceViewModel @Inject constructor(
             currentState.copy(
                 recommendations = currentState.recommendations.toPlaceholderRecommendations(),
                 animateRecommendationChanges = false,
+                hasFreshRecommendations = false,
             )
         }
         requestAutoAnalyze(snapshot = state.toSnapshot())
@@ -447,8 +486,10 @@ class WorkspaceViewModel @Inject constructor(
                         currentState.copy(
                             recommendations = currentState.recommendations.toPlaceholderRecommendations(),
                             animateRecommendationChanges = false,
+                            hasFreshRecommendations = false,
                         )
                     }
+                    stopAutoMove(cancelInFlightAnalysis = false)
                 }
 
                 WorkspaceRecommendationResult.Unavailable -> {
@@ -459,8 +500,10 @@ class WorkspaceViewModel @Inject constructor(
                             recommendations = currentState.recommendations.toPlaceholderRecommendations(),
                             isAnalyzeAvailable = false,
                             animateRecommendationChanges = false,
+                            hasFreshRecommendations = false,
                         )
                     }
+                    stopAutoMove(cancelInFlightAnalysis = false)
                 }
 
                 is WorkspaceRecommendationResult.Success -> {
@@ -473,9 +516,83 @@ class WorkspaceViewModel @Inject constructor(
                         currentState.copy(
                             recommendations = generatedRecommendations,
                             animateRecommendationChanges = currentState.isAnimationsEnabled,
+                            hasFreshRecommendations = true,
                         )
                     }
+                    scheduleAutoMoveFromRecommendations(
+                        waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
+                    )
                 }
+            }
+        }
+    }
+
+    private fun startAutoMoveFromCurrentState() {
+        if (!state.isAutoMoveEnabled) return
+
+        if (!canEnableAutoMove(state = state)) {
+            stopAutoMove()
+            return
+        }
+
+        if (state.hasFreshRecommendations) {
+            scheduleAutoMoveFromRecommendations(waitForRecommendationAnimation = false)
+            return
+        }
+
+        if (state.isAnalyzing || autoAnalyzeJob != null) return
+
+        requestAutoAnalyzeFromCurrentState()
+    }
+
+    private fun scheduleAutoMoveFromRecommendations(
+        waitForRecommendationAnimation: Boolean,
+    ) {
+        if (!state.isAutoMoveEnabled) return
+        if (state.isInteractionLocked || state.isEditBottomSheetVisible) return
+
+        val bestDirection = state.recommendations.bestAutoMoveDirectionOrNull()
+        if (bestDirection == null) {
+            stopAutoMove(cancelInFlightAnalysis = false)
+            return
+        }
+
+        cancelAutoMoveExecution()
+        autoMoveExecutionJob = viewModelScope.launch {
+            if (waitForRecommendationAnimation) {
+                delay(RECOMMENDATION_ANIMATION_DURATION_MILLIS)
+            }
+
+            autoMoveExecutionJob = null
+            executeAutoMove(direction = bestDirection)
+        }
+    }
+
+    private fun executeAutoMove(
+        direction: WorkspaceRecommendationDirection,
+    ) {
+        if (!state.isAutoMoveEnabled) return
+
+        if (!canEnableAutoMove(state = state)) {
+            stopAutoMove()
+            return
+        }
+
+        handleMove(direction = direction)
+    }
+
+    private fun stopAutoMove(
+        cancelInFlightAnalysis: Boolean = true,
+    ) {
+        cancelAutoMoveExecution()
+        if (cancelInFlightAnalysis) {
+            cancelAutoAnalyze()
+        }
+        mutableStateFlow.update { currentState ->
+            if (!currentState.isAutoMoveEnabled) {
+                currentState
+            } else {
+                currentState.copy(isAutoMoveEnabled = false)
             }
         }
     }
@@ -484,6 +601,11 @@ class WorkspaceViewModel @Inject constructor(
         autoAnalyzeJob?.cancel()
         autoAnalyzeJob = null
         activeAutoAnalyzeRequestId = null
+    }
+
+    private fun cancelAutoMoveExecution() {
+        autoMoveExecutionJob?.cancel()
+        autoMoveExecutionJob = null
     }
 
     private fun isCurrentAutoAnalyzeRequest(
@@ -524,7 +646,9 @@ data class WorkspaceState(
     val isSpawnTileEnabled: Boolean,
     val isAutoAnalyzeEnabled: Boolean,
     val isAnimationsEnabled: Boolean,
+    val isAutoMoveEnabled: Boolean,
     val animateRecommendationChanges: Boolean,
+    val hasFreshRecommendations: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
 ) : Parcelable
 
@@ -567,6 +691,8 @@ sealed class WorkspaceAction {
     data object ResetClick : WorkspaceAction()
 
     data object AnalyzeClick : WorkspaceAction()
+
+    data object AutoMoveButtonClick : WorkspaceAction()
 }
 
 private fun WorkspaceState.toSnapshot(): WorkspaceSnapshot =
@@ -586,6 +712,8 @@ private fun WorkspaceSnapshot.toState(
     isAnalyzeAvailable: Boolean = true,
     isAnalyzing: Boolean = false,
     isInteractionLocked: Boolean = false,
+    isAutoMoveEnabled: Boolean = false,
+    hasFreshRecommendations: Boolean = false,
 ): WorkspaceState =
     WorkspaceState(
         boardValues = boardValues,
@@ -606,7 +734,9 @@ private fun WorkspaceSnapshot.toState(
         isSpawnTileEnabled = workspaceSettings.isSpawnTileEnabled,
         isAutoAnalyzeEnabled = workspaceSettings.isAutoAnalyzeEnabled,
         isAnimationsEnabled = workspaceSettings.isAnimationsEnabled,
+        isAutoMoveEnabled = isAutoMoveEnabled,
         animateRecommendationChanges = false,
+        hasFreshRecommendations = hasFreshRecommendations,
         recommendations = recommendations,
     )
 
@@ -620,6 +750,7 @@ private fun WorkspaceState.restoreAfterProcessDeath(): WorkspaceState =
             isAnalyzeAvailable = true,
             isAnalyzing = false,
             isInteractionLocked = false,
+            isAutoMoveEnabled = false,
             animateRecommendationChanges = false,
             canReset = canReset(
                 boardValues = boardValues,
@@ -633,6 +764,7 @@ private fun WorkspaceState.restoreAfterProcessDeath(): WorkspaceState =
             isSettingsDialogVisible = false,
             isAnalyzeAvailable = true,
             isAnalyzing = false,
+            isAutoMoveEnabled = false,
             animateRecommendationChanges = false,
             canReset = canReset(
                 boardValues = boardValues,
@@ -722,6 +854,11 @@ private fun List<WorkspaceRecommendationUi>.toPlaceholderRecommendations(): List
         recommendation.copy(confidencePercent = 0f)
     }
 
+private fun List<WorkspaceRecommendationUi>.bestAutoMoveDirectionOrNull(): WorkspaceRecommendationDirection? =
+    firstOrNull { recommendation -> recommendation.confidencePercent > 0f }
+        ?.direction
+        ?.toDomainDirection()
+
 private fun WorkspaceMoveTileMotionState.toUiMotionState(): AisolverBoardTileMotionState =
     when (this) {
         WorkspaceMoveTileMotionState.Static -> AisolverBoardTileMotionState.Static
@@ -742,6 +879,25 @@ private fun WorkspaceRecommendationDirection.toUiDirection(): AisolverRecommenda
         WorkspaceRecommendationDirection.Left -> AisolverRecommendationDirection.Left
         WorkspaceRecommendationDirection.Down -> AisolverRecommendationDirection.Down
     }
+
+private fun AisolverRecommendationDirection.toDomainDirection(): WorkspaceRecommendationDirection =
+    when (this) {
+        AisolverRecommendationDirection.Up -> WorkspaceRecommendationDirection.Up
+        AisolverRecommendationDirection.Right -> WorkspaceRecommendationDirection.Right
+        AisolverRecommendationDirection.Left -> WorkspaceRecommendationDirection.Left
+        AisolverRecommendationDirection.Down -> WorkspaceRecommendationDirection.Down
+    }
+
+private fun canEnableAutoMove(
+    state: WorkspaceState,
+): Boolean = state.isAutoAnalyzeEnabled &&
+    state.canAnalyze &&
+    state.isAnalyzeAvailable &&
+    !state.isInteractionLocked &&
+    !state.isEditBottomSheetVisible
+
+private fun WorkspaceState.withoutTransientState(): WorkspaceState =
+    copy(isAutoMoveEnabled = false)
 
 private fun WorkspaceState.toWorkspaceSettings(): WorkspaceSettings =
     WorkspaceSettings(
