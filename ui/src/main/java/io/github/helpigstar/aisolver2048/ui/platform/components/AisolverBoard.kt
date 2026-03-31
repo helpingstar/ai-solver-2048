@@ -2,11 +2,10 @@ package io.github.helpigstar.aisolver2048.ui.platform.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,11 +34,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
-import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 object AisolverBoardDefaults {
     const val GridSize = 4
@@ -61,13 +61,6 @@ data class AisolverBoardPosition(
     val row: Int,
     val column: Int,
 )
-
-enum class AisolverBoardSwipeDirection {
-    Up,
-    Right,
-    Left,
-    Down,
-}
 
 enum class AisolverBoardTileMotionState {
     Static,
@@ -103,7 +96,7 @@ fun AisolverBoard(
     animateTileChanges: Boolean = true,
     selectedPosition: AisolverBoardPosition? = null,
     onCellClick: ((AisolverBoardPosition) -> Unit)? = null,
-    onSwipe: ((AisolverBoardSwipeDirection) -> Unit)? = null,
+    onSwipe: ((MoveDirection) -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
@@ -165,7 +158,7 @@ private fun EmptyBoardGrid(
 private fun CellSelectionGrid(
     selectedPosition: AisolverBoardPosition?,
     onCellClick: ((AisolverBoardPosition) -> Unit)?,
-    onSwipe: ((AisolverBoardSwipeDirection) -> Unit)?,
+    onSwipe: ((MoveDirection) -> Unit)?,
 ) {
     val interactionModifier = if (onCellClick == null && onSwipe == null) {
         Modifier
@@ -421,17 +414,17 @@ private fun initialScaleFor(
 private fun resolveSwipeDirection(
     horizontalDistance: Float,
     verticalDistance: Float,
-): AisolverBoardSwipeDirection =
+): MoveDirection =
     if (abs(horizontalDistance) >= abs(verticalDistance)) {
         if (horizontalDistance >= 0f) {
-            AisolverBoardSwipeDirection.Right
+            MoveDirection.Right
         } else {
-            AisolverBoardSwipeDirection.Left
+            MoveDirection.Left
         }
     } else if (verticalDistance >= 0f) {
-        AisolverBoardSwipeDirection.Down
+        MoveDirection.Down
     } else {
-        AisolverBoardSwipeDirection.Up
+        MoveDirection.Up
     }
 
 private fun resolveTappedCell(

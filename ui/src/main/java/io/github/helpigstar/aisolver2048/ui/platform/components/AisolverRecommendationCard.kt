@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAutoAnalyzeButtonVariant
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 
@@ -27,7 +28,7 @@ fun AisolverRecommendationCard(
     recommendations: List<AisolverRecommendation>,
     onAnalyzeClick: () -> Unit,
     onAutoMoveClick: () -> Unit = {},
-    onRecommendationClick: ((AisolverRecommendationDirection) -> Unit)? = null,
+    onRecommendationClick: ((MoveDirection) -> Unit)? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     autoButtonEnabled: Boolean = true,
@@ -77,19 +78,19 @@ private fun AisolverRecommendationCardPreview() {
         AisolverRecommendationCard(
             recommendations = listOf(
                 AisolverRecommendation(
-                    direction = AisolverRecommendationDirection.Left,
+                    direction = MoveDirection.Left,
                     confidencePercent = 78f,
                 ),
                 AisolverRecommendation(
-                    direction = AisolverRecommendationDirection.Right,
+                    direction = MoveDirection.Right,
                     confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
-                    direction = AisolverRecommendationDirection.Up,
+                    direction = MoveDirection.Up,
                     confidencePercent = 15f,
                 ),
                 AisolverRecommendation(
-                    direction = AisolverRecommendationDirection.Down,
+                    direction = MoveDirection.Down,
                     confidencePercent = 15f,
                 ),
             ),

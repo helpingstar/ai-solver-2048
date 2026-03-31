@@ -1,6 +1,7 @@
 package io.github.helpigstar.aisolver2048.data.workspace.manager
 
 import android.os.Parcelable
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
 import kotlinx.parcelize.Parcelize
 
 interface WorkspaceManager {
@@ -16,7 +17,7 @@ interface WorkspaceManager {
 
     fun applyMove(
         snapshot: WorkspaceSnapshot,
-        direction: WorkspaceRecommendationDirection,
+        direction: MoveDirection,
     ): WorkspaceMoveResult
 
     fun spawnRandomTile(
@@ -35,7 +36,7 @@ data class WorkspaceSnapshot(
 ) : Parcelable
 
 data class WorkspaceRecommendationProbability(
-    val direction: WorkspaceRecommendationDirection,
+    val direction: MoveDirection,
     val confidencePercent: Float,
 )
 
@@ -73,11 +74,4 @@ enum class WorkspaceMoveTileMotionState {
     Static,
     Spawned,
     Merged,
-}
-
-enum class WorkspaceRecommendationDirection {
-    Left,
-    Right,
-    Up,
-    Down,
 }

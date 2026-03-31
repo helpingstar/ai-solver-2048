@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -20,18 +19,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationDirection
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardPosition
-import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardSwipeDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardTile
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBottomSheet
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBottomSheetItem
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverGameActions
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendation
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationCard
-import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsDialog
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsItemModel
@@ -114,7 +111,7 @@ private fun WorkspaceScreen(
                     null
                 },
                 onSwipe = if (canTriggerManualMove) { direction ->
-                    onAction(WorkspaceAction.Move(direction.toWorkspaceDirection()))
+                    onAction(WorkspaceAction.Move(direction))
                 } else {
                     null
                 },
@@ -124,7 +121,7 @@ private fun WorkspaceScreen(
                 onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
                 onAutoMoveClick = { onAction(WorkspaceAction.AutoMoveButtonClick) },
                 onRecommendationClick = if (canTriggerManualMove) { direction ->
-                    onAction(WorkspaceAction.Move(direction.toWorkspaceDirection()))
+                    onAction(WorkspaceAction.Move(direction))
                 } else {
                     null
                 },
@@ -245,22 +242,6 @@ private fun List<WorkspaceRecommendationUi>.toRecommendationModels(): List<Aisol
         )
     }
 
-private fun AisolverBoardSwipeDirection.toWorkspaceDirection(): WorkspaceRecommendationDirection =
-    when (this) {
-        AisolverBoardSwipeDirection.Up -> WorkspaceRecommendationDirection.Up
-        AisolverBoardSwipeDirection.Right -> WorkspaceRecommendationDirection.Right
-        AisolverBoardSwipeDirection.Left -> WorkspaceRecommendationDirection.Left
-        AisolverBoardSwipeDirection.Down -> WorkspaceRecommendationDirection.Down
-    }
-
-private fun AisolverRecommendationDirection.toWorkspaceDirection(): WorkspaceRecommendationDirection =
-    when (this) {
-        AisolverRecommendationDirection.Up -> WorkspaceRecommendationDirection.Up
-        AisolverRecommendationDirection.Right -> WorkspaceRecommendationDirection.Right
-        AisolverRecommendationDirection.Left -> WorkspaceRecommendationDirection.Left
-        AisolverRecommendationDirection.Down -> WorkspaceRecommendationDirection.Down
-    }
-
 private fun AisolverBottomSheetItem.toCellValue(): Int =
     when (this) {
         AisolverBottomSheetItem.Clear -> 0
@@ -300,19 +281,19 @@ private fun WorkspaceScreenPreview() {
                 hasFreshRecommendations = true,
                 recommendations = listOf(
                     WorkspaceRecommendationUi(
-                        direction = AisolverRecommendationDirection.Left,
+                        direction = MoveDirection.Left,
                         confidencePercent = 42.8f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = AisolverRecommendationDirection.Right,
+                        direction = MoveDirection.Right,
                         confidencePercent = 28.4f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = AisolverRecommendationDirection.Up,
+                        direction = MoveDirection.Up,
                         confidencePercent = 18.1f,
                     ),
                     WorkspaceRecommendationUi(
-                        direction = AisolverRecommendationDirection.Down,
+                        direction = MoveDirection.Down,
                         confidencePercent = 10.7f,
                     ),
                 ),

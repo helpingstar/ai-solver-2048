@@ -2,10 +2,10 @@ package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceManager
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceMoveTile
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceMoveTileMotionState
-import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationDirection
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationProbability
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceRecommendationResult
 import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceSnapshot
@@ -14,7 +14,6 @@ import io.github.helpigstar.aisolver2048.data.workspace.settings.repository.mode
 import io.github.helpigstar.aisolver2048.ui.platform.base.BaseViewModel
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardTileMotionState
-import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationDirection
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationItemDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationListDefaults
 import kotlinx.coroutines.Job
@@ -271,7 +270,7 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun handleMove(
-        direction: WorkspaceRecommendationDirection,
+        direction: MoveDirection,
     ) {
         if (
             state.isInteractionLocked ||
@@ -551,7 +550,7 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun executeAutoMove(
-        direction: WorkspaceRecommendationDirection,
+        direction: MoveDirection,
     ) {
         if (!state.isAutoMoveEnabled) return
 
@@ -642,7 +641,7 @@ data class WorkspaceBoardTileUi(
 )
 
 data class WorkspaceRecommendationUi(
-    val direction: AisolverRecommendationDirection,
+    val direction: MoveDirection,
     val confidencePercent: Float,
 )
 
@@ -663,7 +662,7 @@ sealed class WorkspaceAction {
 
     data class EditBottomSheetValueClick(val value: Int) : WorkspaceAction()
 
-    data class Move(val direction: WorkspaceRecommendationDirection) : WorkspaceAction()
+    data class Move(val direction: MoveDirection) : WorkspaceAction()
 
     data object UndoClick : WorkspaceAction()
 
@@ -733,7 +732,7 @@ private fun canMove(
 ): Boolean = canAnalyze(boardValues)
 
 private fun defaultWorkspaceRecommendations(): List<WorkspaceRecommendationUi> =
-    AisolverRecommendationDirection.entries.map { direction ->
+    MoveDirection.entries.map { direction ->
         WorkspaceRecommendationUi(
             direction = direction,
             confidencePercent = 0f,
@@ -787,10 +786,9 @@ private fun List<WorkspaceRecommendationUi>.toPlaceholderRecommendations(): List
         recommendation.copy(confidencePercent = 0f)
     }
 
-private fun List<WorkspaceRecommendationUi>.bestAutoMoveDirectionOrNull(): WorkspaceRecommendationDirection? =
+private fun List<WorkspaceRecommendationUi>.bestAutoMoveDirectionOrNull(): MoveDirection? =
     firstOrNull { recommendation -> recommendation.confidencePercent > 0f }
         ?.direction
-        ?.toDomainDirection()
 
 private fun WorkspaceMoveTileMotionState.toUiMotionState(): AisolverBoardTileMotionState =
     when (this) {
@@ -801,25 +799,9 @@ private fun WorkspaceMoveTileMotionState.toUiMotionState(): AisolverBoardTileMot
 
 private fun WorkspaceRecommendationProbability.toUiModel(): WorkspaceRecommendationUi =
     WorkspaceRecommendationUi(
-        direction = direction.toUiDirection(),
+        direction = direction,
         confidencePercent = confidencePercent,
     )
-
-private fun WorkspaceRecommendationDirection.toUiDirection(): AisolverRecommendationDirection =
-    when (this) {
-        WorkspaceRecommendationDirection.Up -> AisolverRecommendationDirection.Up
-        WorkspaceRecommendationDirection.Right -> AisolverRecommendationDirection.Right
-        WorkspaceRecommendationDirection.Left -> AisolverRecommendationDirection.Left
-        WorkspaceRecommendationDirection.Down -> AisolverRecommendationDirection.Down
-    }
-
-private fun AisolverRecommendationDirection.toDomainDirection(): WorkspaceRecommendationDirection =
-    when (this) {
-        AisolverRecommendationDirection.Up -> WorkspaceRecommendationDirection.Up
-        AisolverRecommendationDirection.Right -> WorkspaceRecommendationDirection.Right
-        AisolverRecommendationDirection.Left -> WorkspaceRecommendationDirection.Left
-        AisolverRecommendationDirection.Down -> WorkspaceRecommendationDirection.Down
-    }
 
 private fun canEnableAutoMove(
     state: WorkspaceState,

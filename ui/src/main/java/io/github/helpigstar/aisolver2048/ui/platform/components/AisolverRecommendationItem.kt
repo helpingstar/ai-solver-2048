@@ -30,32 +30,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
+import io.github.helpigstar.aisolver2048.ui.platform.components.util.iconResId
+import io.github.helpigstar.aisolver2048.ui.platform.components.util.label
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 import java.util.Locale
 import kotlin.math.floor
-
-enum class AisolverRecommendationDirection(
-    val label: String,
-    val iconResId: Int,
-) {
-    Left(
-        label = "Left",
-        iconResId = AisolverDrawable.ic_backward,
-    ),
-    Right(
-        label = "Right",
-        iconResId = AisolverDrawable.ic_forward,
-    ),
-    Up(
-        label = "Up",
-        iconResId = AisolverDrawable.ic_upward,
-    ),
-    Down(
-        label = "Down",
-        iconResId = AisolverDrawable.ic_downward,
-    ),
-}
 
 object AisolverRecommendationItemDefaults {
     val IconChipSize = 40.dp
@@ -76,7 +56,7 @@ object AisolverRecommendationItemDefaults {
 
 @Composable
 fun AisolverRecommendationItem(
-    direction: AisolverRecommendationDirection,
+    direction: MoveDirection,
     confidencePercent: Float,
     modifier: Modifier = Modifier,
     animateValueChanges: Boolean = true,
@@ -169,7 +149,7 @@ private fun Float.toDisplayPercent(): String {
 private fun AisolverRecommendationItemPreview() {
     MaterialTheme {
         AisolverRecommendationItem(
-            direction = AisolverRecommendationDirection.Up,
+            direction = MoveDirection.Up,
             confidencePercent = 78f,
             modifier = Modifier
                 .padding(16.dp)
@@ -190,19 +170,19 @@ private fun AisolverRecommendationItemListPreview() {
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
             AisolverRecommendationItem(
-                direction = AisolverRecommendationDirection.Left,
+                direction = MoveDirection.Left,
                 confidencePercent = 78f,
             )
             AisolverRecommendationItem(
-                direction = AisolverRecommendationDirection.Right,
+                direction = MoveDirection.Right,
                 confidencePercent = 78f,
             )
             AisolverRecommendationItem(
-                direction = AisolverRecommendationDirection.Up,
+                direction = MoveDirection.Up,
                 confidencePercent = 78f,
             )
             AisolverRecommendationItem(
-                direction = AisolverRecommendationDirection.Down,
+                direction = MoveDirection.Down,
                 confidencePercent = 78f,
             )
         }

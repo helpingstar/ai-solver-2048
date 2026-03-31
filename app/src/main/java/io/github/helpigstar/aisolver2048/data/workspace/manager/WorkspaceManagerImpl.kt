@@ -1,5 +1,6 @@
 package io.github.helpigstar.aisolver2048.data.workspace.manager
 
+import io.github.helpigstar.aisolver2048.core.model.MoveDirection
 import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceResult
 import io.github.helpigstar.aisolver2048.data.workspace.inference.WorkspaceInferenceRunner
 import kotlin.math.exp
@@ -50,7 +51,7 @@ class WorkspaceManagerImpl(
 
     override fun applyMove(
         snapshot: WorkspaceSnapshot,
-        direction: WorkspaceRecommendationDirection,
+        direction: MoveDirection,
     ): WorkspaceMoveResult {
         validateSnapshot(snapshot)
 
@@ -191,11 +192,11 @@ class WorkspaceManagerImpl(
         snapshot: WorkspaceSnapshot,
         policyLogits: FloatArray,
     ): List<WorkspaceRecommendationProbability> {
-        if (policyLogits.size != WorkspaceRecommendationDirection.entries.size) {
+        if (policyLogits.size != MoveDirection.entries.size) {
             return zeroRecommendations()
         }
 
-        val legalActionMask = WorkspaceRecommendationDirection.entries.map { direction ->
+        val legalActionMask = MoveDirection.entries.map { direction ->
             applyMove(
                 snapshot = snapshot,
                 direction = direction,
@@ -221,7 +222,7 @@ class WorkspaceManagerImpl(
             return zeroRecommendations()
         }
 
-        return WorkspaceRecommendationDirection.entries.map { direction ->
+        return MoveDirection.entries.map { direction ->
             val probability = if (legalActionMask[direction.ordinal]) {
                 (expValuesByIndex.getValue(direction.ordinal) / totalExp) * 100f
             } else {
@@ -239,7 +240,7 @@ class WorkspaceManagerImpl(
     }
 
     private fun zeroRecommendations(): List<WorkspaceRecommendationProbability> =
-        WorkspaceRecommendationDirection.entries.map { direction ->
+        MoveDirection.entries.map { direction ->
             WorkspaceRecommendationProbability(
                 direction = direction,
                 confidencePercent = 0f,
@@ -256,27 +257,27 @@ class WorkspaceManagerImpl(
     }
 
     private fun lineIndicesFor(
-        direction: WorkspaceRecommendationDirection,
+        direction: MoveDirection,
     ): List<List<Int>> = when (direction) {
-        WorkspaceRecommendationDirection.Left -> List(size = BOARD_SIDE_LENGTH) { row ->
+        MoveDirection.Left -> List(size = BOARD_SIDE_LENGTH) { row ->
             List(size = BOARD_SIDE_LENGTH) { column ->
                 (row * BOARD_SIDE_LENGTH) + column
             }
         }
 
-        WorkspaceRecommendationDirection.Right -> List(size = BOARD_SIDE_LENGTH) { row ->
+        MoveDirection.Right -> List(size = BOARD_SIDE_LENGTH) { row ->
             List(size = BOARD_SIDE_LENGTH) { column ->
                 (row * BOARD_SIDE_LENGTH) + (BOARD_SIDE_LENGTH - 1 - column)
             }
         }
 
-        WorkspaceRecommendationDirection.Up -> List(size = BOARD_SIDE_LENGTH) { column ->
+        MoveDirection.Up -> List(size = BOARD_SIDE_LENGTH) { column ->
             List(size = BOARD_SIDE_LENGTH) { row ->
                 (row * BOARD_SIDE_LENGTH) + column
             }
         }
 
-        WorkspaceRecommendationDirection.Down -> List(size = BOARD_SIDE_LENGTH) { column ->
+        MoveDirection.Down -> List(size = BOARD_SIDE_LENGTH) { column ->
             List(size = BOARD_SIDE_LENGTH) { row ->
                 ((BOARD_SIDE_LENGTH - 1 - row) * BOARD_SIDE_LENGTH) + column
             }
