@@ -1,6 +1,5 @@
 package io.github.helpigstar.aisolver2048.ui.platform.components
 
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
