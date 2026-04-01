@@ -24,6 +24,7 @@ import javax.inject.Inject
 
 private const val MAX_UNDO_HISTORY = 50
 private const val EMPTY_CELL_VALUE: Int = 0
+
 private val MOVE_ANIMATION_DURATION_MILLIS: Long =
     AisolverBoardDefaults.MoveDurationMillis.toLong()
 private val MERGE_ANIMATION_DURATION_MILLIS: Long =
@@ -56,9 +57,19 @@ class WorkspaceViewModel @Inject constructor(
     private var autoMoveExecutionJob: Job? = null
     private var activeAutoAnalyzeRequestId: Long? = null
     private var nextAutoAnalyzeRequestId: Long = 0L
+    private var activeMoveAnimationId: Long? = null
+
+    private var nextMoveAnimationId: Long = 0L
+
+    private fun isCurrentMoveAnimation(
+        animationId: Long,
+    ) : Boolean = activeMoveAnimationId == animationId
 
     override fun handleAction(action: WorkspaceAction) {
-        if (state.isAutoMoveEnabled && action != WorkspaceAction.AutoMoveButtonClick) return
+        if (state.isAutoMoveEnabled &&
+            action != WorkspaceAction.AutoMoveButtonClick &&
+            action !is WorkspaceAction.Internal
+        ) return
 
         when (action) {
             is WorkspaceAction.CellClick -> handleCellClick(action.cellIndex)
@@ -74,6 +85,118 @@ class WorkspaceViewModel @Inject constructor(
             WorkspaceAction.AnalyzeClick -> handleAnalyzeClick()
             WorkspaceAction.AutoMoveButtonClick -> handleAutoMoveButtonClick()
             WorkspaceAction.UndoClick -> handleUndoClick()
+            is WorkspaceAction.Internal -> handleInternalAction(action)
+        }
+    }
+
+    private fun handleInternalAction(action: WorkspaceAction.Internal) {
+        when (action) {
+            is WorkspaceAction.Internal.AnalyzeResultReceive -> handleAnalyzeResultReceive(action)
+            is WorkspaceAction.Internal.AutoAnalyzeResultReceive -> handleAutoAnalyzeResultReceive(action)
+            is WorkspaceAction.Internal.AutoMoveExecute -> handleAutoMoveExecute(action)
+            is WorkspaceAction.Internal.MoveAnimationMergePhase -> handleMoveAnimationMergePhase(action)
+            is WorkspaceAction.Internal.MoveAnimationSpawnPhase -> handleMoveAnimationSpawnPhase(action)
+            is WorkspaceAction.Internal.MoveAnimationComplete -> handleMoveAnimationComplete(action)
+        }
+    }
+
+    private fun handleAnalyzeResultReceive(
+        action: WorkspaceAction.Internal.AnalyzeResultReceive,
+    ) {
+        when (val recommendationResult = action.result) {
+            WorkspaceRecommendationResult.InferenceFailed -> {
+                mutableStateFlow.update { currentState ->
+                    currentState.copy(
+                        recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                        isInteractionLocked = false,
+                        isAnalyzing = false,
+                        animateRecommendationChanges = false,
+                        hasFreshRecommendations = false,
+                    )
+                }
+            }
+
+            WorkspaceRecommendationResult.Unavailable -> {
+                mutableStateFlow.update { currentState ->
+                    currentState.copy(
+                        recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                        isAnalyzeAvailable = false,
+                        isInteractionLocked = false,
+                        isAnalyzing = false,
+                        animateRecommendationChanges = false,
+                        hasFreshRecommendations = false,
+                    )
+                }
+            }
+
+            is WorkspaceRecommendationResult.Success -> {
+                val generatedRecommendations =
+                    recommendationResult.recommendations.map { recommendation ->
+                        recommendation.toUiModel()
+                    }
+                mutableStateFlow.update { currentState ->
+                    currentState.copy(
+                        recommendations = generatedRecommendations,
+                        isInteractionLocked = false,
+                        isAnalyzing = false,
+                        animateRecommendationChanges = currentState.isAnimationsEnabled,
+                        hasFreshRecommendations = true,
+                    )
+                }
+                scheduleAutoMoveFromRecommendations(
+                    waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
+                )
+            }
+        }
+    }
+
+
+    private fun handleAutoAnalyzeResultReceive(
+        action: WorkspaceAction.Internal.AutoAnalyzeResultReceive,
+    ) {
+        if (!isCurrentAutoAnalyzeRequest(requestId = action.requestId)) return
+        clearAutoAnalyzeRequest(requestId = action.requestId)
+
+        when (val recommendationResult = action.result) {
+            WorkspaceRecommendationResult.InferenceFailed -> {
+                mutableStateFlow.update { currentState ->
+                    currentState.copy(
+                        recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                        animateRecommendationChanges = false,
+                        hasFreshRecommendations = false,
+                    )
+                }
+                stopAutoMove(cancelInFlightAnalysis = false)
+            }
+
+            WorkspaceRecommendationResult.Unavailable -> {
+                mutableStateFlow.update { currentState ->
+                    currentState.copy(
+                        recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                        isAnalyzeAvailable = false,
+                        animateRecommendationChanges = false,
+                        hasFreshRecommendations = false,
+                    )
+                }
+                stopAutoMove(cancelInFlightAnalysis = false)
+            }
+
+            is WorkspaceRecommendationResult.Success -> {
+                val generatedRecommendations =
+                    recommendationResult.recommendations.map { recommendation ->
+                        recommendation.toUiModel()
+                    }
+                mutableStateFlow.update { currentState ->
+                    currentState.copy(
+                        recommendations = generatedRecommendations,
+                        animateRecommendationChanges = currentState.isAnimationsEnabled,
+                        hasFreshRecommendations = true,
+                    )
+                }
+                scheduleAutoMoveFromRecommendations(
+                    waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
+                )
+            }
         }
     }
 
@@ -204,54 +327,14 @@ class WorkspaceViewModel @Inject constructor(
                 animateRecommendationChanges = false,
             )
         }
-
         viewModelScope.launch {
-            when (val recommendationResult =
-                workspaceManager.generateRecommendations(snapshot = snapshot)) {
-                WorkspaceRecommendationResult.InferenceFailed -> {
-                    mutableStateFlow.update { currentState ->
-                        currentState.copy(
-                            recommendations = currentState.recommendations.toPlaceholderRecommendations(),
-                            isInteractionLocked = false,
-                            isAnalyzing = false,
-                            animateRecommendationChanges = false,
-                            hasFreshRecommendations = false,
-                        )
-                    }
-                }
-
-                WorkspaceRecommendationResult.Unavailable -> {
-                    mutableStateFlow.update { currentState ->
-                        currentState.copy(
-                            recommendations = currentState.recommendations.toPlaceholderRecommendations(),
-                            isAnalyzeAvailable = false,
-                            isInteractionLocked = false,
-                            isAnalyzing = false,
-                            animateRecommendationChanges = false,
-                            hasFreshRecommendations = false,
-                        )
-                    }
-                }
-
-                is WorkspaceRecommendationResult.Success -> {
-                    val generatedRecommendations =
-                        recommendationResult.recommendations.map { recommendation ->
-                            recommendation.toUiModel()
-                        }
-                    mutableStateFlow.update { currentState ->
-                        currentState.copy(
-                            recommendations = generatedRecommendations,
-                            isInteractionLocked = false,
-                            isAnalyzing = false,
-                            animateRecommendationChanges = currentState.isAnimationsEnabled,
-                            hasFreshRecommendations = true,
-                        )
-                    }
-                    scheduleAutoMoveFromRecommendations(
-                        waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
-                    )
-                }
-            }
+            val recommendationResult =
+                workspaceManager.generateRecommendations(snapshot = snapshot)
+            sendAction(
+                WorkspaceAction.Internal.AnalyzeResultReceive(
+                    result = recommendationResult,
+                ),
+            )
         }
     }
 
@@ -346,30 +429,13 @@ class WorkspaceViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            delay(MOVE_ANIMATION_DURATION_MILLIS)
-
-            if (hasMergedTiles) {
-                mutableStateFlow.update { currentState ->
-                    currentState.copy(boardTiles = finalAnimatedBoardTiles)
-                }
-                delay(MERGE_ANIMATION_DURATION_MILLIS)
-            }
-
-            if (spawnAnimatedBoardTiles != null) {
-                mutableStateFlow.update { currentState ->
-                    currentState.copy(boardTiles = spawnAnimatedBoardTiles)
-                }
-                delay(SPAWN_ANIMATION_DURATION_MILLIS)
-            }
-
-            mutableStateFlow.update { currentState ->
-                currentState.copy(
-                    boardTiles = settledBoardTiles,
-                    isInteractionLocked = false,
-                )
-            }
-
-            requestAutoAnalyzeIfEnabled(snapshot = finalSnapshot)
+            launchMoveAnimation(
+                hasMergedTiles = hasMergedTiles,
+                finalAnimatedBoardTiles = finalAnimatedBoardTiles,
+                spawnAnimatedBoardTiles = spawnAnimatedBoardTiles,
+                settledBoardTiles = settledBoardTiles,
+                finalSnapshot = finalSnapshot,
+            )
         }
     }
 
@@ -451,60 +517,111 @@ class WorkspaceViewModel @Inject constructor(
         requestAutoAnalyze(snapshot = snapshot)
     }
 
+    private fun handleAutoMoveExecute(
+        action: WorkspaceAction.Internal.AutoMoveExecute,
+    ) {
+        if (!state.isAutoMoveEnabled) return
+
+        if (!canEnableAutoMove(state = state)) {
+            stopAutoMove()
+            return
+        }
+
+        handleMove(direction = action.direction)
+    }
+
+    private fun handleMoveAnimationMergePhase(
+        action: WorkspaceAction.Internal.MoveAnimationMergePhase,
+    ) {
+        if (!isCurrentMoveAnimation(animationId = action.animationId)) return
+
+        mutableStateFlow.update { currentState ->
+            currentState.copy(boardTiles = action.boardTiles)
+        }
+    }
+
+    private fun handleMoveAnimationSpawnPhase(
+        action: WorkspaceAction.Internal.MoveAnimationSpawnPhase,
+    ) {
+        if (!isCurrentMoveAnimation(animationId = action.animationId)) return
+
+        mutableStateFlow.update { currentState ->
+            currentState.copy(boardTiles = action.boardTiles)
+        }
+    }
+
+    private fun handleMoveAnimationComplete(
+        action: WorkspaceAction.Internal.MoveAnimationComplete,
+    ) {
+        if (!isCurrentMoveAnimation(animationId = action.animationId)) return
+
+        activeMoveAnimationId = null
+        mutableStateFlow.update { currentState ->
+            currentState.copy(
+                boardTiles = action.boardTiles,
+                isInteractionLocked = false,
+            )
+        }
+        requestAutoAnalyzeIfEnabled(snapshot = action.finalSnapshot)
+    }
+
+    private fun launchMoveAnimation(
+        hasMergedTiles: Boolean,
+        finalAnimatedBoardTiles: List<WorkspaceBoardTileUi>,
+        spawnAnimatedBoardTiles: List<WorkspaceBoardTileUi>?,
+        settledBoardTiles: List<WorkspaceBoardTileUi>,
+        finalSnapshot: WorkspaceSnapshot,
+    ) {
+        val animationId = ++nextMoveAnimationId
+        activeMoveAnimationId = animationId
+
+        viewModelScope.launch {
+            delay(MOVE_ANIMATION_DURATION_MILLIS)
+
+            if (hasMergedTiles) {
+                sendAction(
+                    WorkspaceAction.Internal.MoveAnimationMergePhase(
+                        animationId = animationId,
+                        boardTiles = finalAnimatedBoardTiles,
+                    ),
+                )
+                delay(MERGE_ANIMATION_DURATION_MILLIS)
+            }
+
+            if (spawnAnimatedBoardTiles != null) {
+                sendAction(
+                    WorkspaceAction.Internal.MoveAnimationSpawnPhase(
+                        animationId = animationId,
+                        boardTiles = spawnAnimatedBoardTiles,
+                    ),
+                )
+                delay(SPAWN_ANIMATION_DURATION_MILLIS)
+            }
+
+            sendAction(
+                WorkspaceAction.Internal.MoveAnimationComplete(
+                    animationId = animationId,
+                    boardTiles = settledBoardTiles,
+                    finalSnapshot = finalSnapshot,
+                ),
+            )
+        }
+    }
+
+
     private fun requestAutoAnalyze(snapshot: WorkspaceSnapshot) {
         cancelAutoAnalyze()
 
         val requestId = ++nextAutoAnalyzeRequestId
         activeAutoAnalyzeRequestId = requestId
         autoAnalyzeJob = viewModelScope.launch {
-            when (val recommendationResult =
-                workspaceManager.generateRecommendations(snapshot = snapshot)) {
-                WorkspaceRecommendationResult.InferenceFailed -> {
-                    if (!isCurrentAutoAnalyzeRequest(requestId = requestId)) return@launch
-                    clearAutoAnalyzeRequest(requestId = requestId)
-                    mutableStateFlow.update { currentState ->
-                        currentState.copy(
-                            recommendations = currentState.recommendations.toPlaceholderRecommendations(),
-                            animateRecommendationChanges = false,
-                            hasFreshRecommendations = false,
-                        )
-                    }
-                    stopAutoMove(cancelInFlightAnalysis = false)
-                }
-
-                WorkspaceRecommendationResult.Unavailable -> {
-                    if (!isCurrentAutoAnalyzeRequest(requestId = requestId)) return@launch
-                    clearAutoAnalyzeRequest(requestId = requestId)
-                    mutableStateFlow.update { currentState ->
-                        currentState.copy(
-                            recommendations = currentState.recommendations.toPlaceholderRecommendations(),
-                            isAnalyzeAvailable = false,
-                            animateRecommendationChanges = false,
-                            hasFreshRecommendations = false,
-                        )
-                    }
-                    stopAutoMove(cancelInFlightAnalysis = false)
-                }
-
-                is WorkspaceRecommendationResult.Success -> {
-                    if (!isCurrentAutoAnalyzeRequest(requestId = requestId)) return@launch
-                    clearAutoAnalyzeRequest(requestId = requestId)
-                    val generatedRecommendations =
-                        recommendationResult.recommendations.map { recommendation ->
-                            recommendation.toUiModel()
-                        }
-                    mutableStateFlow.update { currentState ->
-                        currentState.copy(
-                            recommendations = generatedRecommendations,
-                            animateRecommendationChanges = currentState.isAnimationsEnabled,
-                            hasFreshRecommendations = true,
-                        )
-                    }
-                    scheduleAutoMoveFromRecommendations(
-                        waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
-                    )
-                }
-            }
+            val recommendationResult = workspaceManager.generateRecommendations(snapshot = snapshot)
+            sendAction(
+                WorkspaceAction.Internal.AutoAnalyzeResultReceive(
+                    requestId = requestId,
+                    result = recommendationResult,
+                )
+            )
         }
     }
 
@@ -545,21 +662,12 @@ class WorkspaceViewModel @Inject constructor(
             }
 
             autoMoveExecutionJob = null
-            executeAutoMove(direction = bestDirection)
+            sendAction(
+                WorkspaceAction.Internal.AutoMoveExecute(
+                    direction = bestDirection,
+                ),
+            )
         }
-    }
-
-    private fun executeAutoMove(
-        direction: MoveDirection,
-    ) {
-        if (!state.isAutoMoveEnabled) return
-
-        if (!canEnableAutoMove(state = state)) {
-            stopAutoMove()
-            return
-        }
-
-        handleMove(direction = direction)
     }
 
     private fun stopAutoMove(
@@ -671,6 +779,37 @@ sealed class WorkspaceAction {
     data object AnalyzeClick : WorkspaceAction()
 
     data object AutoMoveButtonClick : WorkspaceAction()
+
+    sealed class Internal : WorkspaceAction() {
+        data class AnalyzeResultReceive(
+            val result: WorkspaceRecommendationResult,
+        ) : Internal()
+
+        data class AutoAnalyzeResultReceive(
+            val requestId: Long,
+            val result: WorkspaceRecommendationResult,
+        ) : Internal()
+
+        data class AutoMoveExecute(
+            val direction: MoveDirection,
+        ) : Internal()
+
+        data class MoveAnimationMergePhase(
+            val animationId: Long,
+            val boardTiles: List<WorkspaceBoardTileUi>,
+        ) : Internal()
+
+        data class MoveAnimationSpawnPhase(
+            val animationId: Long,
+            val boardTiles: List<WorkspaceBoardTileUi>,
+        ) : Internal()
+
+        data class MoveAnimationComplete(
+            val animationId: Long,
+            val boardTiles: List<WorkspaceBoardTileUi>,
+            val finalSnapshot: WorkspaceSnapshot,
+        ) : Internal()
+    }
 }
 
 private fun WorkspaceState.toSnapshot(): WorkspaceSnapshot =
