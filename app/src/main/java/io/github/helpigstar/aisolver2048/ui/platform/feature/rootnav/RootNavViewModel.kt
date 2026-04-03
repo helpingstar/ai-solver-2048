@@ -7,7 +7,7 @@ import io.github.helpigstar.aisolver2048.data.onboarding.datasource.disk.model.O
 import io.github.helpigstar.aisolver2048.data.onboarding.repository.OnboardingRepository
 import io.github.helpigstar.aisolver2048.data.onboarding.repository.model.UserState
 import io.github.helpigstar.aisolver2048.ui.platform.base.BaseViewModel
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
