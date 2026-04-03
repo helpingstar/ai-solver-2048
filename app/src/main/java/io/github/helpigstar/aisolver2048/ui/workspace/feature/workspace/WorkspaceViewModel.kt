@@ -1,5 +1,7 @@
 package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
 
+import android.os.Parcelable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.helpigstar.aisolver2048.core.model.MoveDirection
@@ -18,12 +20,18 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommen
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommendationListDefaults
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
+
+private const val KEY_STATE = "state"
 private const val MAX_UNDO_HISTORY = 50
 private const val EMPTY_CELL_VALUE: Int = 0
+
 
 private val MOVE_ANIMATION_DURATION_MILLIS: Long =
     AisolverBoardDefaults.MoveDurationMillis.toLong()
@@ -39,11 +47,15 @@ private val RECOMMENDATION_ANIMATION_DURATION_MILLIS: Long =
 
 @HiltViewModel
 class WorkspaceViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val workspaceManager: WorkspaceManager,
     private val workspaceSettingsRepository: WorkspaceSettingsRepository,
 ) : BaseViewModel<WorkspaceState, Unit, WorkspaceAction>(
-    initialState = workspaceManager
-        .createInitialSnapshot()
+    initialState = savedStateHandle.get<WorkspaceSavedState>(KEY_STATE)
+        ?.toRestoredState(
+            workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
+        )
+        ?: workspaceManager.createInitialSnapshot()
         .toState(
             editingCellIndex = null,
             isEditBottomSheetVisible = false,
@@ -58,8 +70,17 @@ class WorkspaceViewModel @Inject constructor(
     private var activeAutoAnalyzeRequestId: Long? = null
     private var nextAutoAnalyzeRequestId: Long = 0L
     private var activeMoveAnimationId: Long? = null
-
     private var nextMoveAnimationId: Long = 0L
+
+    init {
+        savedStateHandle.get<WorkspaceSavedState>(KEY_STATE)
+            ?.undoHistory
+            ?.forEach(undoHistory::addLast)
+
+        stateFlow
+            .onEach(::persistState)
+            .launchIn(viewModelScope)
+    }
 
     private fun isCurrentMoveAnimation(
         animationId: Long,
@@ -714,6 +735,20 @@ class WorkspaceViewModel @Inject constructor(
         }
         undoHistory.addLast(snapshot)
     }
+
+    private fun persistState(currentState: WorkspaceState) {
+        savedStateHandle[KEY_STATE] = WorkspaceSavedState(
+            snapshot = currentState.toSnapshot(),
+            undoHistory = undoHistory.toList(),
+            editingCellIndex = currentState.editingCellIndex,
+            isEditBottomSheetVisible = currentState.isEditBottomSheetVisible,
+            isSettingsDialogVisible = currentState.isSettingsDialogVisible,
+            isAnalyzeAvailable = currentState.isAnalyzeAvailable,
+            hasFreshRecommendations = currentState.hasFreshRecommendations,
+            recommendations = currentState.recommendations,
+        )
+    }
+
 }
 
 
@@ -748,10 +783,24 @@ data class WorkspaceBoardTileUi(
     val motionState: AisolverBoardTileMotionState = AisolverBoardTileMotionState.Static,
 )
 
+@Parcelize
 data class WorkspaceRecommendationUi(
     val direction: MoveDirection,
     val confidencePercent: Float,
-)
+) : Parcelable
+
+@Parcelize
+private data class WorkspaceSavedState(
+    val snapshot: WorkspaceSnapshot,
+    val undoHistory: List<WorkspaceSnapshot>,
+    val editingCellIndex: Int?,
+    val isEditBottomSheetVisible: Boolean,
+    val isSettingsDialogVisible: Boolean,
+    val isAnalyzeAvailable: Boolean,
+    val hasFreshRecommendations: Boolean,
+    val recommendations: List<WorkspaceRecommendationUi>,
+) : Parcelable
+
 
 sealed class WorkspaceAction {
     data class CellClick(val cellIndex: Int) : WorkspaceAction()
@@ -816,6 +865,24 @@ private fun WorkspaceState.toSnapshot(): WorkspaceSnapshot =
     WorkspaceSnapshot(
         boardValues = boardValues,
         score = score,
+    )
+
+private fun WorkspaceSavedState.toRestoredState(
+    workspaceSettings: WorkspaceSettings,
+): WorkspaceState =
+    snapshot.toState(
+        editingCellIndex = editingCellIndex,
+        isEditBottomSheetVisible = isEditBottomSheetVisible,
+        isSettingsDialogVisible = isSettingsDialogVisible,
+        canUndo = undoHistory.isNotEmpty(),
+        workspaceSettings = workspaceSettings,
+        recommendations = recommendations,
+        boardTiles = snapshot.boardValues.toStaticBoardTiles(),
+        isAnalyzeAvailable = isAnalyzeAvailable,
+        isAnalyzing = false,
+        isInteractionLocked = false,
+        isAutoMoveEnabled = false,
+        hasFreshRecommendations = hasFreshRecommendations,
     )
 
 private fun WorkspaceSnapshot.toState(
