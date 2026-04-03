@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.AiSolver2048" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="LaunchTheme" parent="Theme.SplashScreen">
+        <item name="postSplashScreenTheme">@style/Theme.AiSolver2048</item>
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+    </style>
 </resources>
