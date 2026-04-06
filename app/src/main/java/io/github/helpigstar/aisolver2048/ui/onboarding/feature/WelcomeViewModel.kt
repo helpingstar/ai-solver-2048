@@ -5,7 +5,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.helpigstar.aisolver2048.data.onboarding.datasource.disk.model.OnboardingStatus
 import io.github.helpigstar.aisolver2048.data.onboarding.repository.OnboardingRepository
 import io.github.helpigstar.aisolver2048.ui.platform.base.BaseViewModel
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
 @HiltViewModel
