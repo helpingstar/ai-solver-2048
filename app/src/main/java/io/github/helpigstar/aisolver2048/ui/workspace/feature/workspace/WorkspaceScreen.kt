@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.helpigstar.aisolver2048.core.model.MoveDirection
+import io.github.helpigstar.aisolver2048.data.workspace.manager.WorkspaceSnapshot
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardDefaults
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverBoardPosition
@@ -267,9 +268,17 @@ private fun WorkspaceScreenPreview() {
                 editingCellIndex = null,
                 isEditBottomSheetVisible = false,
                 isSettingsDialogVisible = false,
-                canUndo = true,
-                canReset = true,
-                canAnalyze = true,
+                undoHistory = listOf(
+                    WorkspaceSnapshot(
+                        boardValues = listOf(
+                            2, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                        ),
+                        score = 4,
+                    ),
+                ),
                 isAnalyzeAvailable = true,
                 isAnalyzing = false,
                 isInteractionLocked = false,
@@ -297,6 +306,10 @@ private fun WorkspaceScreenPreview() {
                         confidencePercent = 10.7f,
                     ),
                 ),
+                activeAutoAnalyzeRequestId = null,
+                nextAutoAnalyzeRequestId = 0L,
+                activeMoveAnimationId = null,
+                nextMoveAnimationId = 0L,
             ),
             onAction = {},
         )

@@ -60,31 +60,18 @@ class WorkspaceViewModel @Inject constructor(
             editingCellIndex = null,
             isEditBottomSheetVisible = false,
             isSettingsDialogVisible = false,
-            canUndo = false,
+            undoHistory = emptyList(),
             workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
         ),
 ) {
-    private val undoHistory = ArrayDeque<WorkspaceSnapshot>(MAX_UNDO_HISTORY)
     private var autoAnalyzeJob: Job? = null
     private var autoMoveExecutionJob: Job? = null
-    private var activeAutoAnalyzeRequestId: Long? = null
-    private var nextAutoAnalyzeRequestId: Long = 0L
-    private var activeMoveAnimationId: Long? = null
-    private var nextMoveAnimationId: Long = 0L
 
     init {
-        savedStateHandle.get<WorkspaceSavedState>(KEY_STATE)
-            ?.undoHistory
-            ?.forEach(undoHistory::addLast)
-
         stateFlow
             .onEach(::persistState)
             .launchIn(viewModelScope)
     }
-
-    private fun isCurrentMoveAnimation(
-        animationId: Long,
-    ) : Boolean = activeMoveAnimationId == animationId
 
     override fun handleAction(action: WorkspaceAction) {
         if (state.isAutoMoveEnabled &&
@@ -168,6 +155,22 @@ class WorkspaceViewModel @Inject constructor(
                     waitForRecommendationAnimation = state.isAutoMoveEnabled && state.isAnimationsEnabled,
                 )
             }
+        }
+    }
+    private fun clearAutoAnalyzeRequest(requestId: Long) {
+        if (!isCurrentAutoAnalyzeRequest(requestId)) return
+
+        autoAnalyzeJob = null
+        mutableStateFlow.update { currentState ->
+            currentState.copy(activeAutoAnalyzeRequestId = null)
+        }
+    }
+
+    private fun cancelAutoAnalyze() {
+        autoAnalyzeJob?.cancel()
+        autoAnalyzeJob = null
+        mutableStateFlow.update { currentState ->
+            currentState.copy(activeAutoAnalyzeRequestId = null)
         }
     }
 
@@ -271,40 +274,47 @@ class WorkspaceViewModel @Inject constructor(
             return
         }
 
-        pushUndoSnapshot(currentSnapshot)
-        mutableStateFlow.update {
+        val updatedUndoHistory = state.undoHistory.pushUndoSnapshot(currentSnapshot)
+        mutableStateFlow.update { currentState ->
             updatedSnapshot.toState(
                 editingCellIndex = null,
                 isEditBottomSheetVisible = false,
                 isSettingsDialogVisible = false,
-                canUndo = undoHistory.isNotEmpty(),
-                recommendations = state.recommendations.toPlaceholderRecommendations(),
-                isAnalyzeAvailable = state.isAnalyzeAvailable,
-                workspaceSettings = state.toWorkspaceSettings(),
-                isAutoMoveEnabled = state.isAutoMoveEnabled,
+                undoHistory = updatedUndoHistory,
+                recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                isAnalyzeAvailable = currentState.isAnalyzeAvailable,
+                workspaceSettings = currentState.toWorkspaceSettings(),
+                isAutoMoveEnabled = currentState.isAutoMoveEnabled,
+                nextAutoAnalyzeRequestId = currentState.nextAutoAnalyzeRequestId,
+                nextMoveAnimationId = currentState.nextMoveAnimationId,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = updatedSnapshot)
     }
 
-    private fun handleUndoClick() {
-        if (state.isInteractionLocked || state.isEditBottomSheetVisible || undoHistory.isEmpty()) return
 
-        val restoredSnapshot = undoHistory.removeLast()
-        mutableStateFlow.update {
+    private fun handleUndoClick() {
+        if (state.isInteractionLocked || state.isEditBottomSheetVisible || state.undoHistory.isEmpty()) return
+
+        val restoredSnapshot = state.undoHistory.last()
+        val updatedUndoHistory = state.undoHistory.dropLast(1)
+        mutableStateFlow.update { currentState ->
             restoredSnapshot.toState(
                 editingCellIndex = null,
                 isEditBottomSheetVisible = false,
                 isSettingsDialogVisible = false,
-                canUndo = undoHistory.isNotEmpty(),
-                recommendations = state.recommendations.toPlaceholderRecommendations(),
-                isAnalyzeAvailable = state.isAnalyzeAvailable,
-                workspaceSettings = state.toWorkspaceSettings(),
-                isAutoMoveEnabled = state.isAutoMoveEnabled,
+                undoHistory = updatedUndoHistory,
+                recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                isAnalyzeAvailable = currentState.isAnalyzeAvailable,
+                workspaceSettings = currentState.toWorkspaceSettings(),
+                isAutoMoveEnabled = currentState.isAutoMoveEnabled,
+                nextAutoAnalyzeRequestId = currentState.nextAutoAnalyzeRequestId,
+                nextMoveAnimationId = currentState.nextMoveAnimationId,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = restoredSnapshot)
     }
+
 
     private fun handleResetClick() {
         if (state.isInteractionLocked || state.isEditBottomSheetVisible) return
@@ -313,21 +323,24 @@ class WorkspaceViewModel @Inject constructor(
         val currentSnapshot = state.toSnapshot()
         if (currentSnapshot == resetSnapshot) return
 
-        pushUndoSnapshot(currentSnapshot)
-        mutableStateFlow.update {
+        val updatedUndoHistory = state.undoHistory.pushUndoSnapshot(currentSnapshot)
+        mutableStateFlow.update { currentState ->
             resetSnapshot.toState(
                 editingCellIndex = null,
                 isEditBottomSheetVisible = false,
                 isSettingsDialogVisible = false,
-                canUndo = undoHistory.isNotEmpty(),
-                recommendations = state.recommendations.toPlaceholderRecommendations(),
-                isAnalyzeAvailable = state.isAnalyzeAvailable,
-                workspaceSettings = state.toWorkspaceSettings(),
-                isAutoMoveEnabled = state.isAutoMoveEnabled,
+                undoHistory = updatedUndoHistory,
+                recommendations = currentState.recommendations.toPlaceholderRecommendations(),
+                isAnalyzeAvailable = currentState.isAnalyzeAvailable,
+                workspaceSettings = currentState.toWorkspaceSettings(),
+                isAutoMoveEnabled = currentState.isAutoMoveEnabled,
+                nextAutoAnalyzeRequestId = currentState.nextAutoAnalyzeRequestId,
+                nextMoveAnimationId = currentState.nextMoveAnimationId,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = resetSnapshot)
     }
+
 
     private fun handleAnalyzeClick() {
         cancelAutoAnalyze()
@@ -385,13 +398,12 @@ class WorkspaceViewModel @Inject constructor(
         }
 
         val currentSnapshot = state.toSnapshot()
+        val updatedUndoHistory = state.undoHistory.pushUndoSnapshot(currentSnapshot)
         val moveResult = workspaceManager.applyMove(
             snapshot = currentSnapshot,
             direction = direction,
         )
         if (!moveResult.hasChanged) return
-
-        pushUndoSnapshot(currentSnapshot)
 
         val placeholderRecommendations = state.recommendations.toPlaceholderRecommendations()
         val stageOneBoardTiles = moveResult.stageOneTiles.toUiBoardTiles()
@@ -420,7 +432,7 @@ class WorkspaceViewModel @Inject constructor(
                     editingCellIndex = null,
                     isEditBottomSheetVisible = false,
                     isSettingsDialogVisible = false,
-                    canUndo = undoHistory.isNotEmpty(),
+                    undoHistory = updatedUndoHistory,
                     recommendations = placeholderRecommendations,
                     boardTiles = settledBoardTiles,
                     isAnalyzeAvailable = state.isAnalyzeAvailable,
@@ -438,7 +450,7 @@ class WorkspaceViewModel @Inject constructor(
                 editingCellIndex = null,
                 isEditBottomSheetVisible = false,
                 isSettingsDialogVisible = false,
-                canUndo = undoHistory.isNotEmpty(),
+                undoHistory = updatedUndoHistory,
                 recommendations = placeholderRecommendations,
                 boardTiles = stageOneBoardTiles,
                 isAnalyzeAvailable = state.isAnalyzeAvailable,
@@ -576,15 +588,16 @@ class WorkspaceViewModel @Inject constructor(
     ) {
         if (!isCurrentMoveAnimation(animationId = action.animationId)) return
 
-        activeMoveAnimationId = null
         mutableStateFlow.update { currentState ->
             currentState.copy(
                 boardTiles = action.boardTiles,
                 isInteractionLocked = false,
+                activeMoveAnimationId = null,
             )
         }
         requestAutoAnalyzeIfEnabled(snapshot = action.finalSnapshot)
     }
+
 
     private fun launchMoveAnimation(
         hasMergedTiles: Boolean,
@@ -593,8 +606,13 @@ class WorkspaceViewModel @Inject constructor(
         settledBoardTiles: List<WorkspaceBoardTileUi>,
         finalSnapshot: WorkspaceSnapshot,
     ) {
-        val animationId = ++nextMoveAnimationId
-        activeMoveAnimationId = animationId
+        val animationId = state.nextMoveAnimationId + 1
+        mutableStateFlow.update { currentState ->
+            currentState.copy(
+                activeMoveAnimationId = animationId,
+                nextMoveAnimationId = animationId,
+            )
+        }
 
         viewModelScope.launch {
             delay(MOVE_ANIMATION_DURATION_MILLIS)
@@ -630,21 +648,29 @@ class WorkspaceViewModel @Inject constructor(
     }
 
 
+
     private fun requestAutoAnalyze(snapshot: WorkspaceSnapshot) {
         cancelAutoAnalyze()
 
-        val requestId = ++nextAutoAnalyzeRequestId
-        activeAutoAnalyzeRequestId = requestId
+        val requestId = state.nextAutoAnalyzeRequestId + 1
+        mutableStateFlow.update { currentState ->
+            currentState.copy(
+                activeAutoAnalyzeRequestId = requestId,
+                nextAutoAnalyzeRequestId = requestId,
+            )
+        }
+
         autoAnalyzeJob = viewModelScope.launch {
             val recommendationResult = workspaceManager.generateRecommendations(snapshot = snapshot)
             sendAction(
                 WorkspaceAction.Internal.AutoAnalyzeResultReceive(
                     requestId = requestId,
                     result = recommendationResult,
-                )
+                ),
             )
         }
     }
+
 
     private fun startAutoMoveFromCurrentState() {
         if (!state.isAutoMoveEnabled) return
@@ -707,39 +733,34 @@ class WorkspaceViewModel @Inject constructor(
         }
     }
 
-    private fun cancelAutoAnalyze() {
-        autoAnalyzeJob?.cancel()
-        autoAnalyzeJob = null
-        activeAutoAnalyzeRequestId = null
-    }
-
     private fun cancelAutoMoveExecution() {
         autoMoveExecutionJob?.cancel()
         autoMoveExecutionJob = null
     }
 
+    private fun isCurrentMoveAnimation(
+        animationId: Long,
+    ): Boolean = state.activeMoveAnimationId == animationId
+
     private fun isCurrentAutoAnalyzeRequest(
         requestId: Long,
-    ): Boolean = activeAutoAnalyzeRequestId == requestId
+    ): Boolean = state.activeAutoAnalyzeRequestId == requestId
 
-    private fun clearAutoAnalyzeRequest(requestId: Long) {
-        if (activeAutoAnalyzeRequestId == requestId) {
-            activeAutoAnalyzeRequestId = null
-            autoAnalyzeJob = null
-        }
-    }
 
-    private fun pushUndoSnapshot(snapshot: WorkspaceSnapshot) {
-        if (undoHistory.size == MAX_UNDO_HISTORY) {
-            undoHistory.removeFirst()
+    private fun List<WorkspaceSnapshot>.pushUndoSnapshot(
+        snapshot: WorkspaceSnapshot,
+    ): List<WorkspaceSnapshot> =
+        if (size == MAX_UNDO_HISTORY) {
+            drop(1) + snapshot
+        } else {
+            this + snapshot
         }
-        undoHistory.addLast(snapshot)
-    }
+
 
     private fun persistState(currentState: WorkspaceState) {
         savedStateHandle[KEY_STATE] = WorkspaceSavedState(
             snapshot = currentState.toSnapshot(),
-            undoHistory = undoHistory.toList(),
+            undoHistory = currentState.undoHistory,
             editingCellIndex = currentState.editingCellIndex,
             isEditBottomSheetVisible = currentState.isEditBottomSheetVisible,
             isSettingsDialogVisible = currentState.isSettingsDialogVisible,
@@ -759,9 +780,7 @@ data class WorkspaceState(
     val editingCellIndex: Int?,
     val isEditBottomSheetVisible: Boolean,
     val isSettingsDialogVisible: Boolean,
-    val canUndo: Boolean,
-    val canReset: Boolean,
-    val canAnalyze: Boolean,
+    val undoHistory: List<WorkspaceSnapshot>,
     val isAnalyzeAvailable: Boolean,
     val isAnalyzing: Boolean,
     val isInteractionLocked: Boolean,
@@ -772,7 +791,18 @@ data class WorkspaceState(
     val animateRecommendationChanges: Boolean,
     val hasFreshRecommendations: Boolean,
     val recommendations: List<WorkspaceRecommendationUi>,
-)
+    val activeAutoAnalyzeRequestId: Long?,
+    val nextAutoAnalyzeRequestId: Long,
+    val activeMoveAnimationId: Long?,
+    val nextMoveAnimationId: Long,
+) {
+    val canUndo: Boolean
+        get() = undoHistory.isNotEmpty()
+    val canReset: Boolean
+        get() = boardValues.any() { it != EMPTY_CELL_VALUE } || score != 0
+    val canAnalyze: Boolean
+        get() = boardValues.any() { it != EMPTY_CELL_VALUE }
+}
 
 
 data class WorkspaceBoardTileUi(
@@ -874,7 +904,6 @@ private fun WorkspaceSavedState.toRestoredState(
         editingCellIndex = editingCellIndex,
         isEditBottomSheetVisible = isEditBottomSheetVisible,
         isSettingsDialogVisible = isSettingsDialogVisible,
-        canUndo = undoHistory.isNotEmpty(),
         workspaceSettings = workspaceSettings,
         recommendations = recommendations,
         boardTiles = snapshot.boardValues.toStaticBoardTiles(),
@@ -883,13 +912,17 @@ private fun WorkspaceSavedState.toRestoredState(
         isInteractionLocked = false,
         isAutoMoveEnabled = false,
         hasFreshRecommendations = hasFreshRecommendations,
+        undoHistory = undoHistory,
+        activeAutoAnalyzeRequestId = null,
+        nextAutoAnalyzeRequestId = 0L,
+        activeMoveAnimationId = null,
+        nextMoveAnimationId = 0L,
     )
 
 private fun WorkspaceSnapshot.toState(
     editingCellIndex: Int?,
     isEditBottomSheetVisible: Boolean,
     isSettingsDialogVisible: Boolean,
-    canUndo: Boolean,
     workspaceSettings: WorkspaceSettings,
     recommendations: List<WorkspaceRecommendationUi> = defaultWorkspaceRecommendations(),
     boardTiles: List<WorkspaceBoardTileUi> = boardValues.toStaticBoardTiles(),
@@ -898,6 +931,11 @@ private fun WorkspaceSnapshot.toState(
     isInteractionLocked: Boolean = false,
     isAutoMoveEnabled: Boolean = false,
     hasFreshRecommendations: Boolean = false,
+    undoHistory: List<WorkspaceSnapshot> = emptyList(),
+    activeAutoAnalyzeRequestId: Long? = null,
+    nextAutoAnalyzeRequestId: Long = 0L,
+    activeMoveAnimationId: Long? = null,
+    nextMoveAnimationId: Long = 0L,
 ): WorkspaceState =
     WorkspaceState(
         boardValues = boardValues,
@@ -906,12 +944,7 @@ private fun WorkspaceSnapshot.toState(
         editingCellIndex = editingCellIndex,
         isEditBottomSheetVisible = isEditBottomSheetVisible,
         isSettingsDialogVisible = isSettingsDialogVisible,
-        canUndo = canUndo,
-        canReset = canReset(
-            boardValues = boardValues,
-            score = score,
-        ),
-        canAnalyze = canAnalyze(boardValues),
+        undoHistory = undoHistory,
         isAnalyzeAvailable = isAnalyzeAvailable,
         isAnalyzing = isAnalyzing,
         isInteractionLocked = isInteractionLocked,
@@ -922,6 +955,10 @@ private fun WorkspaceSnapshot.toState(
         animateRecommendationChanges = false,
         hasFreshRecommendations = hasFreshRecommendations,
         recommendations = recommendations,
+        activeAutoAnalyzeRequestId = activeAutoAnalyzeRequestId,
+        nextAutoAnalyzeRequestId = nextAutoAnalyzeRequestId,
+        activeMoveAnimationId = activeMoveAnimationId,
+        nextMoveAnimationId = nextMoveAnimationId,
     )
 
 private fun canReset(
