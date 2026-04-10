@@ -70,7 +70,7 @@ fun AisolverRecommendationList(
 
 private fun List<AisolverRecommendation>.listHeight() =
     (AisolverRecommendationItemDefaults.ItemHeight * size) +
-        (AisolverRecommendationItemDefaults.DividerThickness * (size - 1).coerceAtLeast(0))
+            (AisolverRecommendationItemDefaults.DividerThickness * (size - 1).coerceAtLeast(0))
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable

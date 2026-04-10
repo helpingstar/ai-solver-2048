@@ -56,13 +56,13 @@ class WorkspaceViewModel @Inject constructor(
             workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
         )
         ?: workspaceManager.createInitialSnapshot()
-        .toState(
-            editingCellIndex = null,
-            isEditBottomSheetVisible = false,
-            isSettingsDialogVisible = false,
-            undoHistory = emptyList(),
-            workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
-        ),
+            .toState(
+                editingCellIndex = null,
+                isEditBottomSheetVisible = false,
+                isSettingsDialogVisible = false,
+                undoHistory = emptyList(),
+                workspaceSettings = workspaceSettingsRepository.getWorkspaceSettings(),
+            ),
 ) {
     private var autoAnalyzeJob: Job? = null
     private var autoMoveExecutionJob: Job? = null
@@ -100,10 +100,19 @@ class WorkspaceViewModel @Inject constructor(
     private fun handleInternalAction(action: WorkspaceAction.Internal) {
         when (action) {
             is WorkspaceAction.Internal.AnalyzeResultReceive -> handleAnalyzeResultReceive(action)
-            is WorkspaceAction.Internal.AutoAnalyzeResultReceive -> handleAutoAnalyzeResultReceive(action)
+            is WorkspaceAction.Internal.AutoAnalyzeResultReceive -> handleAutoAnalyzeResultReceive(
+                action
+            )
+
             is WorkspaceAction.Internal.AutoMoveExecute -> handleAutoMoveExecute(action)
-            is WorkspaceAction.Internal.MoveAnimationMergePhase -> handleMoveAnimationMergePhase(action)
-            is WorkspaceAction.Internal.MoveAnimationSpawnPhase -> handleMoveAnimationSpawnPhase(action)
+            is WorkspaceAction.Internal.MoveAnimationMergePhase -> handleMoveAnimationMergePhase(
+                action
+            )
+
+            is WorkspaceAction.Internal.MoveAnimationSpawnPhase -> handleMoveAnimationSpawnPhase(
+                action
+            )
+
             is WorkspaceAction.Internal.MoveAnimationComplete -> handleMoveAnimationComplete(action)
         }
     }
@@ -157,6 +166,7 @@ class WorkspaceViewModel @Inject constructor(
             }
         }
     }
+
     private fun clearAutoAnalyzeRequest(requestId: Long) {
         if (!isCurrentAutoAnalyzeRequest(requestId)) return
 
@@ -646,8 +656,6 @@ class WorkspaceViewModel @Inject constructor(
             )
         }
     }
-
-
 
     private fun requestAutoAnalyze(snapshot: WorkspaceSnapshot) {
         cancelAutoAnalyze()

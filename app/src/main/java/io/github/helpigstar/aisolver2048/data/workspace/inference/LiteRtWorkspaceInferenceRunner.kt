@@ -33,7 +33,8 @@ class LiteRtWorkspaceInferenceRunner(
         boardValues: List<Int>,
     ): WorkspaceInferenceResult =
         withContext(Dispatchers.Default) {
-            val model = getOrCreateCompiledModel() ?: return@withContext WorkspaceInferenceResult.Unavailable
+            val model = getOrCreateCompiledModel()
+                ?: return@withContext WorkspaceInferenceResult.Unavailable
             val inputBuffer = try {
                 model.createInputBuffer(MODEL_INPUT_NAME)
             } catch (exception: Exception) {

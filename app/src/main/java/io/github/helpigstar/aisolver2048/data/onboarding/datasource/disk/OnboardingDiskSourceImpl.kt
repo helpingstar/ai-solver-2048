@@ -15,8 +15,7 @@ private const val ONBOARDING_STATUS_KEY = "onboardingStatus"
 class OnboardingDiskSourceImpl(
     private val json: Json,
     sharedPreferences: SharedPreferences,
-) : BaseDiskSource(sharedPreferences = sharedPreferences)
-    ,OnboardingDiskSource {
+) : BaseDiskSource(sharedPreferences = sharedPreferences), OnboardingDiskSource {
 
     private val mutableOnboardingStatusFlowMap =
         mutableMapOf<String, MutableSharedFlow<OnboardingStatus?>>()

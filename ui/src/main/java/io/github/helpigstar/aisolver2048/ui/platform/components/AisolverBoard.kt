@@ -191,10 +191,10 @@ private fun CellSelectionGrid(
                     if (
                         !passedTouchSlop &&
                         (
-                            abs(totalHorizontalDrag) > viewConfiguration.touchSlop ||
-                                abs(totalVerticalDrag) > viewConfiguration.touchSlop
-                            )
-                        ) {
+                                abs(totalHorizontalDrag) > viewConfiguration.touchSlop ||
+                                        abs(totalVerticalDrag) > viewConfiguration.touchSlop
+                                )
+                    ) {
                         passedTouchSlop = true
                     }
 

@@ -48,7 +48,8 @@ fun AisolverGameActions(
             variant = AisolverActionButtonVariant.Settings,
             onClick = onSettingsClick,
             enabled = settingsEnabled,
-            contentDescription = settingsContentDescription ?: AisolverActionButtonVariant.Settings.label,
+            contentDescription = settingsContentDescription
+                ?: AisolverActionButtonVariant.Settings.label,
         )
     }
 }

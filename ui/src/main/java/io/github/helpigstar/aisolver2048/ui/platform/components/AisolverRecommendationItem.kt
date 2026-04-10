@@ -63,7 +63,8 @@ fun AisolverRecommendationItem(
     onClick: (() -> Unit)? = null,
     showDivider: Boolean = true,
 ) {
-    val resolvedConfidencePercent = confidencePercent.coerceIn(minimumValue = 0f, maximumValue = 100f)
+    val resolvedConfidencePercent =
+        confidencePercent.coerceIn(minimumValue = 0f, maximumValue = 100f)
     val animatedConfidencePercent = animateFloatAsState(
         targetValue = resolvedConfidencePercent,
         animationSpec = if (animateValueChanges) {

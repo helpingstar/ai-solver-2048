@@ -11,10 +11,10 @@ import timber.log.Timber
 fun rememberAisolver2048NavController(
     name: String,
     vararg navigators: Navigator<out NavDestination>
-) : NavHostController =
+): NavHostController =
     rememberNavController(navigators = navigators).apply {
         this.addOnDestinationChangedListener { _, destination, _ ->
             val graph = destination.parent?.route?.let { " in $it" }.orEmpty()
             Timber.d("$name destination changed: ${destination.route}$graph")
+        }
     }
-}

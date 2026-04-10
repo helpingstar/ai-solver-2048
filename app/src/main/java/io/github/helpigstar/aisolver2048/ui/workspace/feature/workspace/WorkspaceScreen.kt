@@ -64,10 +64,10 @@ private fun WorkspaceScreen(
     val canOpenSettings =
         !isAutoMoveEnabled && !state.isInteractionLocked && !state.isEditBottomSheetVisible
     val canUseAnalyzeButton = state.canAnalyze &&
-        state.isAnalyzeAvailable &&
-        !state.isInteractionLocked &&
-        !state.isEditBottomSheetVisible &&
-        !isAutoMoveEnabled
+            state.isAnalyzeAvailable &&
+            !state.isInteractionLocked &&
+            !state.isEditBottomSheetVisible &&
+            !isAutoMoveEnabled
     val canUseAutoButton = if (isAutoMoveEnabled) {
         true
     } else {
@@ -91,13 +91,13 @@ private fun WorkspaceScreen(
             WorkspaceStatusSection(
                 score = state.score,
                 canUndo = !isAutoMoveEnabled &&
-                    state.canUndo &&
-                    !state.isInteractionLocked &&
-                    !state.isEditBottomSheetVisible,
+                        state.canUndo &&
+                        !state.isInteractionLocked &&
+                        !state.isEditBottomSheetVisible,
                 canReset = !isAutoMoveEnabled &&
-                    state.canReset &&
-                    !state.isInteractionLocked &&
-                    !state.isEditBottomSheetVisible,
+                        state.canReset &&
+                        !state.isInteractionLocked &&
+                        !state.isEditBottomSheetVisible,
                 canOpenSettings = canOpenSettings,
                 onUndoClick = { onAction(WorkspaceAction.UndoClick) },
                 onResetClick = { onAction(WorkspaceAction.ResetClick) },
