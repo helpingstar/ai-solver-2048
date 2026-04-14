@@ -33,7 +33,10 @@ fun AisolverTile(
     size: Dp = AisolverTileDefaults.Size,
 ) {
     val tileColors = tileColorsFor(value = value)
-    val fontSize = tileFontSize(value = value)
+    val fontSize = tileFontSize(
+        value = value,
+        size = size,
+    )
 
     Box(
         modifier = modifier
@@ -90,9 +93,14 @@ private fun tileColorsFor(value: Int): TileColors {
     )
 }
 
-private fun tileFontSize(value: Int): TextUnit {
+private fun tileFontSize(
+    value: Int,
+    size: Dp,
+): TextUnit {
     val digitCount = value.toString().length
-    return (36 - (digitCount * 4)).sp
+    val baseFontSize = 36 - (digitCount * 4)
+    val scaleFactor = size / AisolverTileDefaults.Size
+    return (baseFontSize * scaleFactor).sp
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)

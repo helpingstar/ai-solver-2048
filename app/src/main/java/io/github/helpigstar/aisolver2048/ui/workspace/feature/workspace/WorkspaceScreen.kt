@@ -1,6 +1,7 @@
 package io.github.helpigstar.aisolver2048.ui.workspace.feature.workspace
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,65 +81,74 @@ private fun WorkspaceScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = defaultAisolverColorScheme.background.primary,
     ) { paddingValues ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .consumeWindowInsets(paddingValues)
                 .imePadding()
                 .padding(top = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            WorkspaceStatusSection(
-                score = state.score,
-                canUndo = !isAutoMoveEnabled &&
-                        state.canUndo &&
-                        !state.isInteractionLocked &&
-                        !state.isEditBottomSheetVisible,
-                canReset = !isAutoMoveEnabled &&
-                        state.canReset &&
-                        !state.isInteractionLocked &&
-                        !state.isEditBottomSheetVisible,
-                canOpenSettings = canOpenSettings,
-                onUndoClick = { onAction(WorkspaceAction.UndoClick) },
-                onResetClick = { onAction(WorkspaceAction.ResetClick) },
-                onSettingsClick = { onAction(WorkspaceAction.SettingsClick) },
-            )
-            AisolverBoard(
-                tiles = state.boardTiles.toBoardTiles(),
-                animateTileChanges = state.isAnimationsEnabled,
-                onCellClick = if (canEditBoardCells) { position ->
-                    onAction(WorkspaceAction.CellClick(position.toCellIndex()))
-                } else {
-                    null
-                },
-                onSwipe = if (canTriggerManualMove) { direction ->
-                    onAction(WorkspaceAction.Move(direction))
-                } else {
-                    null
-                },
-            )
-            AisolverRecommendationCard(
-                recommendations = state.recommendations.toRecommendationModels(),
-                onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
-                onAutoMoveClick = { onAction(WorkspaceAction.AutoMoveButtonClick) },
-                onRecommendationClick = if (canTriggerManualMove) { direction ->
-                    onAction(WorkspaceAction.Move(direction))
-                } else {
-                    null
-                },
-                modifier = Modifier.width(AisolverBoardDefaults.BoardSize),
-                enabled = canUseAnalyzeButton,
-                autoButtonEnabled = canUseAutoButton,
-                autoButtonVariant = if (isAutoMoveEnabled) {
-                    AisolverAutoAnalyzeButtonVariant.Stop
-                } else {
-                    AisolverAutoAnalyzeButtonVariant.Auto
-                },
-                analyzeButtonLabel = if (state.isAnalyzing) "Analyzing" else "Analyze",
-                animateRecommendationChanges = state.animateRecommendationChanges && state.isAnimationsEnabled,
-            )
+            val sharedWidth = minOf(maxWidth, AisolverBoardDefaults.BoardSize)
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                WorkspaceStatusSection(
+                    score = state.score,
+                    width = sharedWidth,
+                    canUndo = !isAutoMoveEnabled &&
+                            state.canUndo &&
+                            !state.isInteractionLocked &&
+                            !state.isEditBottomSheetVisible,
+                    canReset = !isAutoMoveEnabled &&
+                            state.canReset &&
+                            !state.isInteractionLocked &&
+                            !state.isEditBottomSheetVisible,
+                    canOpenSettings = canOpenSettings,
+                    onUndoClick = { onAction(WorkspaceAction.UndoClick) },
+                    onResetClick = { onAction(WorkspaceAction.ResetClick) },
+                    onSettingsClick = { onAction(WorkspaceAction.SettingsClick) },
+                )
+                AisolverBoard(
+                    tiles = state.boardTiles.toBoardTiles(),
+                    boardSize = sharedWidth,
+                    animateTileChanges = state.isAnimationsEnabled,
+                    onCellClick = if (canEditBoardCells) { position ->
+                        onAction(WorkspaceAction.CellClick(position.toCellIndex()))
+                    } else {
+                        null
+                    },
+                    onSwipe = if (canTriggerManualMove) { direction ->
+                        onAction(WorkspaceAction.Move(direction))
+                    } else {
+                        null
+                    },
+                )
+                AisolverRecommendationCard(
+                    recommendations = state.recommendations.toRecommendationModels(),
+                    onAnalyzeClick = { onAction(WorkspaceAction.AnalyzeClick) },
+                    onAutoMoveClick = { onAction(WorkspaceAction.AutoMoveButtonClick) },
+                    onRecommendationClick = if (canTriggerManualMove) { direction ->
+                        onAction(WorkspaceAction.Move(direction))
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.width(sharedWidth),
+                    enabled = canUseAnalyzeButton,
+                    autoButtonEnabled = canUseAutoButton,
+                    autoButtonVariant = if (isAutoMoveEnabled) {
+                        AisolverAutoAnalyzeButtonVariant.Stop
+                    } else {
+                        AisolverAutoAnalyzeButtonVariant.Auto
+                    },
+                    analyzeButtonLabel = if (state.isAnalyzing) "Analyzing" else "Analyze",
+                    animateRecommendationChanges = state.animateRecommendationChanges &&
+                            state.isAnimationsEnabled,
+                )
+            }
         }
 
         if (state.isEditBottomSheetVisible) {
@@ -187,6 +199,7 @@ private fun WorkspaceScreen(
 @Composable
 private fun WorkspaceStatusSection(
     score: Int,
+    width: Dp,
     canUndo: Boolean,
     canReset: Boolean,
     canOpenSettings: Boolean,
@@ -196,7 +209,7 @@ private fun WorkspaceStatusSection(
 ) {
     Row(
         modifier = Modifier
-            .width(AisolverBoardDefaults.BoardSize)
+            .width(width)
             .background(defaultAisolverColorScheme.background.primary),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -249,7 +262,7 @@ private fun AisolverBottomSheetItem.toCellValue(): Int =
         is AisolverBottomSheetItem.Value -> value
     }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@PreviewScreenSizes
 @Composable
 private fun WorkspaceScreenPreview() {
     val previewBoardValues = listOf(

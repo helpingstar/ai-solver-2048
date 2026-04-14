@@ -91,6 +91,7 @@ data class AisolverBoardTile(
 fun AisolverBoard(
     tiles: List<AisolverBoardTile>,
     modifier: Modifier = Modifier,
+    boardSize: Dp = AisolverBoardDefaults.BoardSize,
     boardColor: Color = defaultAisolverColorScheme.board.background,
     emptyCellColor: Color = defaultAisolverColorScheme.board.cell,
     animateTileChanges: Boolean = true,
@@ -98,20 +99,36 @@ fun AisolverBoard(
     onCellClick: ((AisolverBoardPosition) -> Unit)? = null,
     onSwipe: ((MoveDirection) -> Unit)? = null,
 ) {
+    val boardPadding = boardSize.scaledBy(
+        designValue = AisolverBoardDefaults.BoardPadding,
+    )
+    val cellGap = boardSize.scaledBy(
+        designValue = AisolverBoardDefaults.CellGap,
+    )
+    val cellSize =
+        (boardSize - (boardPadding * 2) - (cellGap * (AisolverBoardDefaults.GridSize - 1))) /
+                AisolverBoardDefaults.GridSize
+
     Box(
         modifier = modifier
-            .requiredSize(AisolverBoardDefaults.BoardSize)
+            .requiredSize(boardSize)
             .clip(AisolverBoardDefaults.BoardShape)
             .background(boardColor)
-            .padding(AisolverBoardDefaults.BoardPadding),
+            .padding(boardPadding),
     ) {
-        EmptyBoardGrid(emptyCellColor = emptyCellColor)
+        EmptyBoardGrid(
+            emptyCellColor = emptyCellColor,
+            cellSize = cellSize,
+            cellGap = cellGap,
+        )
 
         Box {
             tiles.forEach { tile ->
                 key(tile.id) {
                     AnimatedBoardTile(
                         tile = tile,
+                        cellSize = cellSize,
+                        cellGap = cellGap,
                         animateTileChanges = animateTileChanges,
                     )
                 }
@@ -121,6 +138,8 @@ fun AisolverBoard(
         if (selectedPosition != null || onCellClick != null || onSwipe != null) {
             CellSelectionGrid(
                 selectedPosition = selectedPosition,
+                cellSize = cellSize,
+                cellGap = cellGap,
                 onCellClick = onCellClick,
                 onSwipe = onSwipe,
             )
@@ -131,18 +150,20 @@ fun AisolverBoard(
 @Composable
 private fun EmptyBoardGrid(
     emptyCellColor: Color,
+    cellSize: Dp,
+    cellGap: Dp,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
+        verticalArrangement = Arrangement.spacedBy(cellGap),
     ) {
         repeat(AisolverBoardDefaults.GridSize) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
+                horizontalArrangement = Arrangement.spacedBy(cellGap),
             ) {
                 repeat(AisolverBoardDefaults.GridSize) {
                     Box(
                         modifier = Modifier
-                            .size(AisolverBoardDefaults.CellSize)
+                            .size(cellSize)
                             .background(
                                 color = emptyCellColor,
                                 shape = AisolverBoardDefaults.CellShape,
@@ -157,15 +178,17 @@ private fun EmptyBoardGrid(
 @Composable
 private fun CellSelectionGrid(
     selectedPosition: AisolverBoardPosition?,
+    cellSize: Dp,
+    cellGap: Dp,
     onCellClick: ((AisolverBoardPosition) -> Unit)?,
     onSwipe: ((MoveDirection) -> Unit)?,
 ) {
     val interactionModifier = if (onCellClick == null && onSwipe == null) {
         Modifier
     } else {
-        Modifier.pointerInput(onCellClick, onSwipe) {
-            val cellSizePx = AisolverBoardDefaults.CellSize.toPx()
-            val stepPx = (AisolverBoardDefaults.CellSize + AisolverBoardDefaults.CellGap).toPx()
+        Modifier.pointerInput(onCellClick, onSwipe, cellSize, cellGap) {
+            val cellSizePx = cellSize.toPx()
+            val stepPx = (cellSize + cellGap).toPx()
 
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
@@ -230,17 +253,17 @@ private fun CellSelectionGrid(
 
     Column(
         modifier = interactionModifier,
-        verticalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
+        verticalArrangement = Arrangement.spacedBy(cellGap),
     ) {
         repeat(AisolverBoardDefaults.GridSize) { row ->
             Row(
-                horizontalArrangement = Arrangement.spacedBy(AisolverBoardDefaults.CellGap),
+                horizontalArrangement = Arrangement.spacedBy(cellGap),
             ) {
                 repeat(AisolverBoardDefaults.GridSize) { column ->
                     val position = AisolverBoardPosition(row = row, column = column)
                     val isSelected = position == selectedPosition
                     val cellModifier = Modifier
-                        .size(AisolverBoardDefaults.CellSize)
+                        .size(cellSize)
                         .background(
                             color = if (isSelected) {
                                 defaultAisolverColorScheme.board.cellSelected
@@ -262,11 +285,21 @@ private fun CellSelectionGrid(
 @Composable
 private fun AnimatedBoardTile(
     tile: AisolverBoardTile,
+    cellSize: Dp,
+    cellGap: Dp,
     animateTileChanges: Boolean,
 ) {
     val density = LocalDensity.current
-    val targetOffset = boardOffsetFor(position = tile.position)
-    val initialOffset = boardOffsetFor(position = tile.previousPosition ?: tile.position)
+    val targetOffset = boardOffsetFor(
+        position = tile.position,
+        cellSize = cellSize,
+        cellGap = cellGap,
+    )
+    val initialOffset = boardOffsetFor(
+        position = tile.previousPosition ?: tile.position,
+        cellSize = cellSize,
+        cellGap = cellGap,
+    )
 
     val offsetX = remember(tile.id) {
         Animatable(with(density) { initialOffset.first.toPx() })
@@ -372,6 +405,7 @@ private fun AnimatedBoardTile(
         ScaledTile(
             value = tile.value,
             scale = scale.value,
+            cellSize = cellSize,
         )
     }
 }
@@ -380,28 +414,38 @@ private fun AnimatedBoardTile(
 private fun ScaledTile(
     value: Int,
     scale: Float,
+    cellSize: Dp,
 ) {
     Box(
         modifier = Modifier
-            .size(AisolverBoardDefaults.CellSize)
+            .size(cellSize)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             },
     ) {
-        AisolverTile(value = value)
+        AisolverTile(
+            value = value,
+            size = cellSize,
+        )
     }
 }
 
 private fun boardOffsetFor(
     position: AisolverBoardPosition,
+    cellSize: Dp,
+    cellGap: Dp,
 ): Pair<Dp, Dp> {
-    val step = AisolverBoardDefaults.CellSize + AisolverBoardDefaults.CellGap
+    val step = cellSize + cellGap
     return Pair(
         first = step * position.column,
         second = step * position.row,
     )
 }
+
+private fun Dp.scaledBy(
+    designValue: Dp,
+): Dp = this * (designValue / AisolverBoardDefaults.BoardSize)
 
 private fun initialScaleFor(
     motionState: AisolverBoardTileMotionState,
