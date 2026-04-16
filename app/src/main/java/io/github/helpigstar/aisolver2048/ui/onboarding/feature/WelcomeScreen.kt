@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -107,7 +108,9 @@ private fun WelcomeScreenContent(
         HorizontalPager(state = pagerState) { index ->
             WelcomeCardCompact(
                 state = state.pages[index],
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth(),
             )
         }
 
@@ -147,6 +150,8 @@ private fun WelcomeCardCompact(
     ) {
         Image(
             painter = rememberVectorPainter(id = state.imageRes),
+            alignment = Alignment.Center,
+            contentScale = ContentScale.Fit,
             contentDescription = null,
             modifier = Modifier.size(240.dp),
         )
