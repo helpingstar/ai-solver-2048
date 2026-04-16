@@ -254,4 +254,4 @@ private fun AisolverSettingsDialogPreview() {
     }
 }
 
-private const val PRIVACY_POLICY_URL = "https://policies.google.com/privacy"
+private const val PRIVACY_POLICY_URL = "https://helpingstar.github.io/app/2048coach/privacy/"
