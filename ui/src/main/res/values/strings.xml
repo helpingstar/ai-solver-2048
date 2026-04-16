@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="page_number_x_of_y">%1$s of %2$s</string>
+    <string name="welcome_title_1">Build The Board</string>
+    <string name="welcome_message_1">Tap cells to recreate your current 2048 board in seconds.</string>
+    <string name="welcome_title_2">Analyze The Best Move</string>
+    <string name="welcome_message_2">Run analysis to see the strongest next move with confidence.</string>
+    <string name="welcome_title_3">Tune Your Play</string>
+    <string name="welcome_message_3">Control auto analysis, auto move, animations, and tile spawning to match your workflow.</string>
+    <string name="welcome_start_button">Get Started</string>
+</resources>
