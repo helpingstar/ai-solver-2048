@@ -17,7 +17,7 @@ configure<ApplicationExtension> {
     }
 
     defaultConfig {
-        applicationId = "io.github.helpigstar.aisolver2048"
+        applicationId = "io.github.helpigstar.coach2048"
         minSdk {
             version = release(libs.versions.minSdk.get().toInt())
         }
