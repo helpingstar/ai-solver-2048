@@ -35,7 +35,7 @@ Parse the input to determine review context:
 
 ### Phase 2: Review
 
-Invoke the `reviewing-changes` skill and use it to perform the Android-specific code review. Use the PR context from Phase 1 (change type, files affected, modules, Jira requirements) to inform the skill's change type detection and checklist selection.
+Invoke the `reviewing-changes` skill and use it to perform the Android-specific code review. Use the PR context from Phase 1 (change type, files affected, modules, requirements) to inform the skill's change type detection and checklist selection.
 
 The skill will:
 1. Detect the change type based on files and PR context from Phase 1

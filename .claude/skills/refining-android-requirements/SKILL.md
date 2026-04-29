@@ -1,7 +1,7 @@
 ---
 name: refining-android-requirements
 version: 0.1.0
-description: Requirements gap analysis and structured specification for AiSolver2048 Android. Use when refining requirements, analyzing specs, identifying gaps, or producing structured specifications from tickets or descriptions. Triggered by "refine requirements", "gap analysis", "spec review", "requirements analysis", "what's missing from this spec", "analyze this ticket".
+description: Requirements gap analysis and structured specification for AiSolver2048 Android. Use when refining requirements, analyzing specs, identifying gaps, or producing structured specifications from descriptions. Triggered by "refine requirements", "gap analysis", "spec review", "requirements analysis", "what's missing from this spec", "analyze this spec".
 ---
 
 # Requirements Refinement

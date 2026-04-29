@@ -24,8 +24,8 @@ configure<ApplicationExtension> {
         targetSdk {
             version = release(libs.versions.targetSdk.get().toInt())
         }
-        versionCode = 2
-        versionName = "1.0.2"
+        versionCode = 3
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
