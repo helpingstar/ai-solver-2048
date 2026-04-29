@@ -11,7 +11,7 @@ Run through this checklist before committing or opening a PR.
 ## Code Quality
 - [ ] No unintended file changes (`git diff` review)
 - [ ] KDoc on all new public APIs
-- [ ] No TODO comments left behind (or they reference a ticket)
+- [ ] No TODO comments left behind
 
 ## AiSolver2048 Patterns
 - [ ] String resources in `:ui` module with typographic quotes
