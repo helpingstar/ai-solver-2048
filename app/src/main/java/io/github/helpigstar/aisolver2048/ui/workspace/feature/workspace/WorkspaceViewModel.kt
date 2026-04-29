@@ -74,11 +74,6 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     override fun handleAction(action: WorkspaceAction) {
-        if (state.isAutoMoveEnabled &&
-            action != WorkspaceAction.AutoMoveButtonClick &&
-            action !is WorkspaceAction.Internal
-        ) return
-
         when (action) {
             is WorkspaceAction.CellClick -> handleCellClick(action.cellIndex)
             WorkspaceAction.SettingsClick -> handleSettingsClick()
