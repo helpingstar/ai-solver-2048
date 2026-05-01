@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,8 +24,10 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -48,7 +52,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.helpigstar.aisolver2048.ui.R as uiR
 import io.github.helpigstar.aisolver2048.ui.platform.base.util.EventsEffect
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverFilledButton
 import io.github.helpigstar.aisolver2048.ui.platform.components.scaffold.AisolverScaffold
 import io.github.helpigstar.aisolver2048.ui.platform.components.util.rememberVectorPainter
 import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverString
@@ -125,13 +128,34 @@ private fun WelcomeScreenContent(
                 .height(44.dp)
         )
 
-        AisolverFilledButton(
-            label = stringResource(id = AisolverString.welcome_start_button),
+        val startButtonLabel = stringResource(id = AisolverString.welcome_start_button)
+        Button(
             onClick = onGetStartedClick,
             modifier = Modifier
                 .padding(horizontal = 16.dp)
-                .fillMaxWidth(),
-        )
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription = startButtonLabel
+                },
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFC55A3A),
+                contentColor = Color.White,
+            ),
+            contentPadding = PaddingValues(16.dp),
+        ) {
+            Text(
+                text = startButtonLabel,
+                textAlign = TextAlign.Center,
+                style = TextStyle(
+                    fontSize = 17.sp,
+                    lineHeight = 26.sp,
+                    fontFamily = FontFamily(Font(uiR.font.pretendard_semibold)),
+                ),
+                color = Color.White,
+                modifier = Modifier.semantics { hideFromAccessibility() },
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
         Spacer(modifier = Modifier.navigationBarsPadding())
