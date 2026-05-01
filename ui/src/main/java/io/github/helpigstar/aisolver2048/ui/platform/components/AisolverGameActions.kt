@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverActionButton
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverActionButtonVariant
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverTonalIconButton
+import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
+import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverString
 
 object AisolverGameActionsDefaults {
     val ContentSpacing = 16.dp
@@ -32,24 +34,24 @@ fun AisolverGameActions(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(AisolverGameActionsDefaults.ContentSpacing),
     ) {
-        AisolverActionButton(
-            variant = AisolverActionButtonVariant.Undo,
+        AisolverTonalIconButton(
+            vectorIconRes = AisolverDrawable.ic_undo,
+            contentDescription = undoContentDescription ?: stringResource(AisolverString.action_undo),
             onClick = onUndoClick,
-            enabled = undoEnabled,
-            contentDescription = undoContentDescription ?: AisolverActionButtonVariant.Undo.label,
+            isEnabled = undoEnabled,
         )
-        AisolverActionButton(
-            variant = AisolverActionButtonVariant.Reset,
+        AisolverTonalIconButton(
+            vectorIconRes = AisolverDrawable.ic_autorenew,
+            contentDescription = resetContentDescription ?: stringResource(AisolverString.action_reset),
             onClick = onResetClick,
-            enabled = resetEnabled,
-            contentDescription = resetContentDescription ?: AisolverActionButtonVariant.Reset.label,
+            isEnabled = resetEnabled,
         )
-        AisolverActionButton(
-            variant = AisolverActionButtonVariant.Settings,
-            onClick = onSettingsClick,
-            enabled = settingsEnabled,
+        AisolverTonalIconButton(
+            vectorIconRes = AisolverDrawable.ic_settings,
             contentDescription = settingsContentDescription
-                ?: AisolverActionButtonVariant.Settings.label,
+                ?: stringResource(AisolverString.action_settings),
+            onClick = onSettingsClick,
+            isEnabled = settingsEnabled,
         )
     }
 }

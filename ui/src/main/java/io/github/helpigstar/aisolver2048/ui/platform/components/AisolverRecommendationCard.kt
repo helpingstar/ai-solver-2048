@@ -5,14 +5,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.helpigstar.aisolver2048.core.model.MoveDirection
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAutoAnalyzeButtonVariant
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.color.aisolverAutoFilledButtonColors
+import io.github.helpigstar.aisolver2048.ui.platform.components.util.rememberVectorPainter
+import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 
 object AisolverRecommendationCardDefaults {
@@ -32,11 +36,13 @@ fun AisolverRecommendationCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     autoButtonEnabled: Boolean = true,
-    autoButtonVariant: AisolverAutoAnalyzeButtonVariant = AisolverAutoAnalyzeButtonVariant.Auto,
     animateRecommendationChanges: Boolean = true,
     title: String = "Best move",
     analyzeButtonLabel: String = "Analyze",
     analyzeButtonContentDescription: String? = null,
+    autoButtonLabel: String = "Auto",
+    autoButtonIcon: Painter = rememberVectorPainter(id = AisolverDrawable.ic_play_circle),
+    autoButtonColors: ButtonColors = aisolverAutoFilledButtonColors(),
 ) {
     Surface(
         modifier = modifier,
@@ -57,10 +63,12 @@ fun AisolverRecommendationCard(
                 onAutoMoveClick = onAutoMoveClick,
                 enabled = enabled,
                 autoButtonEnabled = autoButtonEnabled,
-                autoButtonVariant = autoButtonVariant,
                 title = title,
                 analyzeButtonLabel = analyzeButtonLabel,
                 analyzeButtonContentDescription = analyzeButtonContentDescription,
+                autoButtonLabel = autoButtonLabel,
+                autoButtonIcon = autoButtonIcon,
+                autoButtonColors = autoButtonColors,
             )
             AisolverRecommendationList(
                 recommendations = recommendations,

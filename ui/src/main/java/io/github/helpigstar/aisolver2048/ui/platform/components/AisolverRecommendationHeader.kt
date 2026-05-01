@@ -6,20 +6,24 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAnalyzeButton
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAutoAnalyzeButton
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverAutoAnalyzeButtonVariant
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.AisolverFilledButton
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.color.aisolverAnalyzeFilledButtonColors
+import io.github.helpigstar.aisolver2048.ui.platform.components.button.color.aisolverAutoFilledButtonColors
+import io.github.helpigstar.aisolver2048.ui.platform.components.util.rememberVectorPainter
+import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 
 object AisolverRecommendationHeaderDefaults {
@@ -39,10 +43,12 @@ fun AisolverRecommendationHeader(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     autoButtonEnabled: Boolean = true,
-    autoButtonVariant: AisolverAutoAnalyzeButtonVariant = AisolverAutoAnalyzeButtonVariant.Auto,
     title: String = "Best move",
     analyzeButtonLabel: String = "Analyze",
     analyzeButtonContentDescription: String? = null,
+    autoButtonLabel: String = "Auto",
+    autoButtonIcon: Painter = rememberVectorPainter(id = AisolverDrawable.ic_play_circle),
+    autoButtonColors: ButtonColors = aisolverAutoFilledButtonColors(),
 ) {
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -72,16 +78,20 @@ fun AisolverRecommendationHeader(
                 horizontalArrangement = Arrangement.spacedBy(AisolverRecommendationHeaderDefaults.ContentSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AisolverAnalyzeButton(
-                    onClick = onAnalyzeClick,
-                    enabled = enabled,
+                AisolverFilledButton(
                     label = analyzeButtonLabel,
-                    contentDescription = analyzeButtonContentDescription,
+                    onClick = onAnalyzeClick,
+                    icon = rememberVectorPainter(id = AisolverDrawable.ic_analyze),
+                    isEnabled = enabled,
+                    colors = aisolverAnalyzeFilledButtonColors(),
+                    contentDescription = analyzeButtonContentDescription ?: analyzeButtonLabel,
                 )
-                AisolverAutoAnalyzeButton(
-                    variant = autoButtonVariant,
+                AisolverFilledButton(
+                    label = autoButtonLabel,
                     onClick = onAutoMoveClick,
-                    enabled = autoButtonEnabled,
+                    icon = autoButtonIcon,
+                    isEnabled = autoButtonEnabled,
+                    colors = autoButtonColors,
                 )
             }
         }

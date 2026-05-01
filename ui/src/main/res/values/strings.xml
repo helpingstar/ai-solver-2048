@@ -9,4 +9,7 @@
     <string name="welcome_title_3">Tune Your Play</string>
     <string name="welcome_message_3">Control auto analysis, auto move, animations, and tile spawning to match your workflow.</string>
     <string name="welcome_start_button">Get Started</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_settings">Settings</string>
 </resources>
