@@ -410,7 +410,6 @@ class WorkspaceViewModel @Inject constructor(
         )
         if (!moveResult.hasChanged) return
 
-        val placeholderRecommendations = state.recommendations.toPlaceholderRecommendations()
         val stageOneBoardTiles = moveResult.stageOneTiles.toUiBoardTiles()
         val finalAnimatedBoardTiles = moveResult.finalTiles.toUiBoardTiles()
         val settledMoveBoardTiles = finalAnimatedBoardTiles.toSettledBoardTiles()
@@ -430,6 +429,11 @@ class WorkspaceViewModel @Inject constructor(
         val settledBoardTiles = spawnAnimatedBoardTiles
             ?.toSettledBoardTiles()
             ?: settledMoveBoardTiles
+        val nextRecommendations = if (willRequestAutoAnalyze(snapshot = finalSnapshot)) {
+            state.recommendations
+        } else {
+            state.recommendations.toPlaceholderRecommendations()
+        }
 
         if (!state.isAnimationsEnabled) {
             mutableStateFlow.update {
@@ -438,7 +442,7 @@ class WorkspaceViewModel @Inject constructor(
                     isEditBottomSheetVisible = false,
                     isSettingsDialogVisible = false,
                     undoHistory = updatedUndoHistory,
-                    recommendations = placeholderRecommendations,
+                    recommendations = nextRecommendations,
                     boardTiles = settledBoardTiles,
                     isAnalyzeAvailable = state.isAnalyzeAvailable,
                     workspaceSettings = state.toWorkspaceSettings(),
@@ -456,7 +460,7 @@ class WorkspaceViewModel @Inject constructor(
                 isEditBottomSheetVisible = false,
                 isSettingsDialogVisible = false,
                 undoHistory = updatedUndoHistory,
-                recommendations = placeholderRecommendations,
+                recommendations = nextRecommendations,
                 boardTiles = stageOneBoardTiles,
                 isAnalyzeAvailable = state.isAnalyzeAvailable,
                 isInteractionLocked = true,
@@ -544,16 +548,15 @@ class WorkspaceViewModel @Inject constructor(
     }
 
     private fun requestAutoAnalyzeIfEnabled(snapshot: WorkspaceSnapshot) {
-        if (
-            !state.isAutoAnalyzeEnabled ||
-            !state.isAnalyzeAvailable ||
-            !canAnalyze(snapshot.boardValues)
-        ) {
-            return
-        }
+        if (!willRequestAutoAnalyze(snapshot = snapshot)) return
 
         requestAutoAnalyze(snapshot = snapshot)
     }
+
+    private fun willRequestAutoAnalyze(snapshot: WorkspaceSnapshot): Boolean =
+        state.isAutoAnalyzeEnabled &&
+                state.isAnalyzeAvailable &&
+                canAnalyze(snapshot.boardValues)
 
     private fun handleAutoMoveExecute(
         action: WorkspaceAction.Internal.AutoMoveExecute,
