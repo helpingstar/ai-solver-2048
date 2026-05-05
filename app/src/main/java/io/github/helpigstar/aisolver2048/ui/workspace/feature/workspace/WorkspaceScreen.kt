@@ -36,10 +36,6 @@ import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverRecommen
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverScoreCard
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsDialog
 import io.github.helpigstar.aisolver2048.ui.platform.components.AisolverSettingsItemModel
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.color.aisolverAutoFilledButtonColors
-import io.github.helpigstar.aisolver2048.ui.platform.components.button.color.aisolverStopFilledButtonColors
-import io.github.helpigstar.aisolver2048.ui.platform.components.util.rememberVectorPainter
-import io.github.helpigstar.aisolver2048.ui.platform.resource.AisolverDrawable
 import io.github.helpigstar.aisolver2048.ui.platform.theme.color.defaultAisolverColorScheme
 import io.github.helpigstar.aisolver2048.ui.theme.AiSolver2048Theme
 
@@ -78,19 +74,6 @@ private fun WorkspaceScreen(
         true
     } else {
         canUseAnalyzeButton && state.isAutoAnalyzeEnabled
-    }
-    val autoButtonLabel = if (isAutoMoveEnabled) "Stop" else "Auto"
-    val autoButtonIcon = rememberVectorPainter(
-        id = if (isAutoMoveEnabled) {
-            AisolverDrawable.ic_stop_circle
-        } else {
-            AisolverDrawable.ic_play_circle
-        },
-    )
-    val autoButtonColors = if (isAutoMoveEnabled) {
-        aisolverStopFilledButtonColors()
-    } else {
-        aisolverAutoFilledButtonColors()
     }
 
     Scaffold(
@@ -155,10 +138,8 @@ private fun WorkspaceScreen(
                     modifier = Modifier.width(sharedWidth),
                     enabled = canUseAnalyzeButton,
                     autoButtonEnabled = canUseAutoButton,
+                    isAutoMoveActive = isAutoMoveEnabled,
                     analyzeButtonLabel = if (state.isAnalyzing) "Analyzing" else "Analyze",
-                    autoButtonLabel = autoButtonLabel,
-                    autoButtonIcon = autoButtonIcon,
-                    autoButtonColors = autoButtonColors,
                     animateRecommendationChanges = state.animateRecommendationChanges &&
                             state.isAnimationsEnabled,
                 )
