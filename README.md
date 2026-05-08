@@ -2,6 +2,8 @@
 
 AI Solver 2048 is an Android 2048 workspace that helps players inspect a board, run on-device move analysis, and optionally let the app execute recommended moves automatically.
 
+<a href='https://play.google.com/store/apps/details?id=io.github.helpigstar.coach2048'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' height='80px'/></a>
+
 Built with:
 
 - Kotlin
